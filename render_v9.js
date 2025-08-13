@@ -777,12 +777,13 @@ async function switchBackend(backendName) {
             if (!isPaused) {
                 // 启动循环（使用我们封装的 startRenderLoop）
                 startRenderLoop();
+            } else {
+                loadingScreen.style.display = 'none';
+                loadingScreen.style.opacity = '0';
             }
 
             if (backendName === 'webgl') {
                 animate(lastFrameTime);
-            } else {
-                loadingScreen.style.opacity = '0';
             }
 
             // 隐藏加载界面
