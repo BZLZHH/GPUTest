@@ -630,70 +630,139 @@ const wgslScenes = {
     },
     cave : {
         map : `
-        fn map(p: vec3f) -> vec4f {
-            let p_rep = opRep(p, vec3f(6.0, 6.0, 6.0));
-
-            // 树干
-            let trunk = vec4f(sdCylinder(p_rep - vec3f(0.0, 0.0, 0.0), 0.3, 2.5), 3.0, 0.6, 0.0);
-            // 树叶
-            let leaves = vec4f(sdSphere(p_rep - vec3f(0.0, 2.0, 0.0), 1.0), 1.0, 0.9, 0.0);
-            // 石头
-            let stone1 = vec4f(sdSphere(p_rep - vec3f(2.0, 0.2, -1.5), 0.5), 2.0, 0.7, 0.0);
-            let stone2 = vec4f(sdSphere(p_rep - vec3f(-1.5, 0.3, 2.0), 0.6), 2.0, 0.7, 0.0);
-            // 地面
-            let ground = vec4f(sdPlane(p), 4.0, 0.5, 0.0);
-
-            // 河流 SDF (沿 Z 方向)
-            let river = vec4f(sdBox(p - vec3f(0.0, 0.0, 0.0), vec3f(6.0, 0.05, 1.0)), 5.0, 0.3, 1.0);
-
-            // 漂浮光点 (动态小球)
-            let t = u.time * 0.2;
-            let light1 = vec4f(sdSphere(p - vec3f(sin(t) * 2.0, 1.5 + sin(t*1.5)*0.3, cos(t)*2.0), 0.1), 6.0, 1.0, 1.0);
-            let light2 = vec4f(sdSphere(p - vec3f(cos(t*0.8)*2.5, 1.8 + cos(t*1.2)*0.3, sin(t*0.9)*2.0), 0.1), 6.0, 1.0, 1.0);
-
-            var res = ground;
-            res = opUnion(res, trunk);
-            res = opUnion(res, leaves);
-            res = opUnion(res, stone1);
-            res = opUnion(res, stone2);
-            res = opUnion(res, river);
-            res = opUnion(res, light1);
-            res = opUnion(res, light2);
-
-            return res;
-        }
+    fn map(p: vec3f) -> vec4f {
+        // 使用重复模式创建森林布局
+        let p_rep = opRep(p, vec3f(8.0, 8.0, 8.0));
+        
+        // 树干 (增加更多变体)
+        let trunk1 = vec4f(sdCylinder(p_rep - vec3f(0.0, 0.0, 0.0), 0.35, 3.0), 3.0, 0.5, 0.0);
+        let trunk2 = vec4f(sdCylinder(p_rep - vec3f(1.5, 0.0, 1.5), 0.3, 2.8), 3.0, 0.5, 0.0);
+        let trunk3 = vec4f(sdCylinder(p_rep - vec3f(-1.8, 0.0, -1.2), 0.4, 3.2), 3.0, 0.5, 0.0);
+        
+        // 树叶 (多种形状和大小)
+        let leaves1 = vec4f(sdSphere(p_rep - vec3f(0.0, 3.0, 0.0), 1.4), 1.0, 0.85, 0.1);
+        let leaves2 = vec4f(sdEllipsoid(p_rep - vec3f(1.5, 3.0, 1.5), vec3f(1.0, 1.6, 1.0)), 1.0, 0.9, 0.1);
+        let leaves3 = vec4f(sdBox(p_rep - vec3f(-1.8, 3.5, -1.2), vec3f(1.2, 1.0, 1.2)), 1.0, 0.8, 0.1);
+        
+        // 石头 (更多数量和形状)
+        let stone1 = vec4f(sdSphere(p_rep - vec3f(2.0, 0.2, -1.5), 0.6), 2.0, 0.65, 0.0);
+        let stone2 = vec4f(sdSphere(p_rep - vec3f(-1.5, 0.3, 2.0), 0.7), 2.0, 0.65, 0.0);
+        let stone3 = vec4f(sdBox(p_rep - vec3f(-2.5, 0.1, -0.5), vec3f(0.8, 0.3, 0.5)), 2.0, 0.7, 0.0);
+        let stone4 = vec4f(sdOctahedron(p_rep - vec3f(1.0, 0.2, -2.5), 0.5), 2.0, 0.75, 0.0);
+        
+        // 地面 (带细节)
+        let ground = vec4f(sdPlane(p), 4.0, 0.4, 0.0);
+        
+        // 河流 (弯曲形状)
+        let river_offset = sin(p.x * 0.3) * 1.5;
+        let river = vec4f(sdBox(p - vec3f(0.0, 0.1, river_offset), vec3f(8.0, 0.08, 1.2)), 5.0, 0.2, 1.5);
+        
+        // 蘑菇 (增加数量)
+        let mushroom1 = vec4f(sdCapsule(p_rep - vec3f(0.8, 0.0, -0.5), 0.6, 0.1), 7.0, 0.8, 0.5);
+        let mushroom2 = vec4f(sdCapsule(p_rep - vec3f(-1.2, 0.0, 1.0), 0.5, 0.08), 7.0, 0.8, 0.5);
+        let mushroom3 = vec4f(sdCapsule(p_rep - vec3f(2.0, 0.0, -1.0), 0.7, 0.12), 7.0, 0.8, 0.5);
+        
+        // 花朵 (增加反射)
+        let flower1 = vec4f(sdSphere(p_rep - vec3f(0.5, 0.2, 1.0), 0.15), 8.0, 0.9, 0.8);
+        let flower2 = vec4f(sdSphere(p_rep - vec3f(-0.7, 0.2, -1.8), 0.15), 8.0, 0.9, 0.8);
+        let flower3 = vec4f(sdSphere(p_rep - vec3f(1.8, 0.2, 0.5), 0.15), 8.0, 0.9, 0.8);
+        
+        // 漂浮光点 (更多数量和动态)
+        let t = u.time * 0.2;
+        let light1 = vec4f(sdSphere(p - vec3f(sin(t) * 3.0, 1.5 + sin(t*1.5)*0.5, cos(t)*3.0), 0.15), 6.0, 0.95, 2.0);
+        let light2 = vec4f(sdSphere(p - vec3f(cos(t*0.8)*3.5, 1.8 + cos(t*1.2)*0.4, sin(t*0.9)*3.0), 0.15), 6.0, 0.95, 2.0);
+        let light3 = vec4f(sdSphere(p - vec3f(sin(t*1.2)*2.5, 2.0 + sin(t*0.8)*0.3, cos(t*1.1)*2.5), 0.15), 6.0, 0.95, 2.0);
+        let light4 = vec4f(sdSphere(p - vec3f(cos(t*0.6)*3.0, 1.6 + sin(t*1.3)*0.4, sin(t*0.7)*3.2), 0.15), 6.0, 0.95, 2.0);
+        
+        // 大型发光水晶 (增加反射)
+        let crystal = vec4f(sdOctahedron(p - vec3f(0.0, 1.5, 0.0), 1.2), 9.0, 0.9, 2.0);
+        
+        var res = ground;
+        res = opUnion(res, trunk1);
+        res = opUnion(res, trunk2);
+        res = opUnion(res, trunk3);
+        res = opUnion(res, leaves1);
+        res = opUnion(res, leaves2);
+        res = opUnion(res, leaves3);
+        res = opUnion(res, stone1);
+        res = opUnion(res, stone2);
+        res = opUnion(res, stone3);
+        res = opUnion(res, stone4);
+        res = opUnion(res, river);
+        res = opUnion(res, mushroom1);
+        res = opUnion(res, mushroom2);
+        res = opUnion(res, mushroom3);
+        res = opUnion(res, flower1);
+        res = opUnion(res, flower2);
+        res = opUnion(res, flower3);
+        res = opUnion(res, light1);
+        res = opUnion(res, light2);
+        res = opUnion(res, light3);
+        res = opUnion(res, light4);
+        res = opUnion(res, crystal);
+        
+        return res;
+    }
     `,
         getColor : `
-        fn get_color(mat_id: f32) -> vec3f {
-            if (mat_id < 1.5) {
-                return vec3f(0.5, 0.9, 0.6); // 树叶
-            }
-            if (mat_id < 3.0) {
-                return vec3f(0.4, 0.3, 0.25); // 树干 / 石头
-            }
-            if (mat_id < 5.0) {
-                return vec3f(0.2, 0.5, 0.7); // 河流
-            }
+    fn get_color(mat_id: f32) -> vec3f {
+        if (mat_id < 1.5) {
+            return vec3f(0.5, 0.9, 0.6); // 树叶
+        }
+        if (mat_id < 2.5) {
+            return vec3f(0.4, 0.3, 0.25); // 石头
+        }
+        if (mat_id < 3.5) {
+            return vec3f(0.3, 0.2, 0.15); // 树干
+        }
+        if (mat_id < 4.5) {
+            return vec3f(0.2, 0.4, 0.1); // 地面
+        }
+        if (mat_id < 5.5) {
+            return vec3f(0.2, 0.5, 0.7); // 河流
+        }
+        if (mat_id < 6.5) {
             return vec3f(1.0, 1.0, 0.8); // 漂浮光点
         }
+        if (mat_id < 7.5) {
+            return vec3f(1.0, 0.3, 0.3); // 蘑菇茎
+        }
+        if (mat_id < 8.5) {
+            return vec3f(0.9, 0.1, 0.1); // 花朵
+        }
+        return vec3f(0.7, 0.9, 1.0);     // 水晶
+    }
     `,
         getEmission : `
-        fn get_emission(mat_id: f32, glow: f32) -> vec3f {
-            if (glow > 0.0) {
-                if (mat_id < 1.5) {
-                    return vec3f(0.8, 1.0, 0.5) * 2.0; // 树叶微光
-                }
-                if (mat_id < 5.0) {
-                    return vec3f(0.3, 0.5, 1.0) * 1.5; // 河流微光反射
-                }
-                return vec3f(1.0, 0.8, 0.5) * 3.0;     // 漂浮光点
+    fn get_emission(mat_id: f32, glow: f32) -> vec3f {
+        if (glow > 0.0) {
+            if (mat_id < 1.5) {
+                return vec3f(0.5, 1.0, 0.3) * 1.5; // 树叶微光
             }
-            return vec3f(0.0);
+            if (mat_id < 5.5) {
+                return vec3f(0.3, 0.6, 1.0) * 2.0 * (0.8 + 0.2 * sin(u.time*2.0)); // 河流动态微光
+            }
+            if (mat_id < 6.5) {
+                return vec3f(1.0, 0.9, 0.6) * 4.0; // 漂浮光点
+            }
+            if (mat_id < 7.5) {
+                return vec3f(1.0, 0.4, 0.4) * 1.5; // 蘑菇茎微光
+            }
+            if (mat_id < 8.5) {
+                return vec3f(1.0, 0.6, 0.6) * 2.5; // 花朵发光
+            }
+            return vec3f(0.5, 0.8, 1.0) * 3.0 * (0.9 + 0.1 * sin(u.time)); // 水晶脉动光芒
         }
+        return vec3f(0.0);
+    }
     `,
         cameraPath : `
-        let time = u.time * 0.05;
-        var ro = vec3f(8.0 * cos(time), 3.5, 8.0 * sin(time));
+    let time = u.time * 0.05;
+    var ro = vec3f(
+        10.0 * cos(time * 0.7),
+        4.0 + sin(time * 0.3),
+        10.0 * sin(time * 0.7)
+    );
     `
     },
 
