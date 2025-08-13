@@ -630,47 +630,47 @@ const wgslScenes = {
     },
     cave : {
         map : `
-        fn sdSphere(p: vec3f, s: f32) -> f32 { return length(p) - s; }
-        fn sdPlane(p: vec3f) -> f32 { return p.y; }
-        fn sdCylinder(p: vec3f, r: f32, h: f32) -> f32 {
+        fn local_sdSphere(p: vec3f, s: f32) -> f32 { return length(p) - s; }
+        fn local_sdPlane(p: vec3f) -> f32 { return p.y; }
+        fn local_sdCylinder(p: vec3f, r: f32, h: f32) -> f32 {
             let d = abs(vec2f(length(p.xz), p.y)) - vec2f(r, h);
             return min(max(d.x, d.y), 0.0) + length(max(d, vec2f(0.0)));
         }
-        fn sdCone(p: vec3f, c: vec2f) -> f32 {
+        fn local_sdCone(p: vec3f, c: vec2f) -> f32 {
             let q = length(p.xz);
             return dot(c, vec2f(q, p.y));
         }
-        fn sdBox(p: vec3f, b: vec3f) -> f32 {
+        fn local_sdBox(p: vec3f, b: vec3f) -> f32 {
             let q = abs(p) - b;
             return length(max(q, vec3f(0.0))) + min(max(q.x, max(q.y, q.z)), 0.0);
         }
-        fn opRep(p: vec3f, c: vec3f) -> vec3f { return p % c - 0.5 * c; }
-        fn opUnion(a: vec4f, b: vec4f) -> vec4f { if (a.x < b.x) { return a; } return b; }
+        fn local_opRep(p: vec3f, c: vec3f) -> vec3f { return p % c - 0.5 * c; }
+        fn local_opUnion(a: vec4f, b: vec4f) -> vec4f { if (a.x < b.x) { return a; } return b; }
         
         fn map(p: vec3f) -> vec4f {
             // 洞穴基础结构
-            let cave = vec4f(sdSphere(p, 12.0), 1.0, 0.5, 0.0);
+            let cave = vec4f(local_sdSphere(p, 12.0), 1.0, 0.5, 0.0);
         
             // 石笋阵列
-            let stalagmite1 = vec4f(sdCone(p - vec3f(2.0, 0.0, 2.0), vec2f(0.5, 3.0)), 3.0, 0.7, 0.0);
-            let stalagmite2 = vec4f(sdCone(p - vec3f(-2.0, 0.0, -2.0), vec2f(0.3, 2.0)), 3.0, 0.65, 0.0);
-            let stalagmite3 = vec4f(sdCone(p - vec3f(1.0, 0.0, -3.0), vec2f(0.4, 2.5)), 3.0, 0.7, 0.0);
+            let stalagmite1 = vec4f(local_sdCone(p - vec3f(2.0, 0.0, 2.0), vec2f(0.5, 3.0)), 3.0, 0.7, 0.0);
+            let stalagmite2 = vec4f(local_sdCone(p - vec3f(-2.0, 0.0, -2.0), vec2f(0.3, 2.0)), 3.0, 0.65, 0.0);
+            let stalagmite3 = vec4f(local_sdCone(p - vec3f(1.0, 0.0, -3.0), vec2f(0.4, 2.5)), 3.0, 0.7, 0.0);
         
             // 地面
-            let ground = vec4f(sdPlane(p), 2.0, 0.6, 0.0);
+            let ground = vec4f(local_sdPlane(p), 2.0, 0.6, 0.0);
         
             // 石柱/岩石
-            let pillar1 = vec4f(sdCylinder(p - vec3f(3.0, 0.0, -1.0), 0.4, 4.0), 4.0, 0.8, 0.0);
-            let pillar2 = vec4f(sdCylinder(p - vec3f(-3.0, 0.0, 1.0), 0.5, 3.5), 4.0, 0.75, 0.0);
+            let pillar1 = vec4f(local_sdCylinder(p - vec3f(3.0, 0.0, -1.0), 0.4, 4.0), 4.0, 0.8, 0.0);
+            let pillar2 = vec4f(local_sdCylinder(p - vec3f(-3.0, 0.0, 1.0), 0.5, 3.5), 4.0, 0.75, 0.0);
         
             // 合并所有元素
             var res = cave;
-            res = opUnion(res, stalagmite1);
-            res = opUnion(res, stalagmite2);
-            res = opUnion(res, stalagmite3);
-            res = opUnion(res, ground);
-            res = opUnion(res, pillar1);
-            res = opUnion(res, pillar2);
+            res = local_opUnion(res, stalagmite1);
+            res = local_opUnion(res, stalagmite2);
+            res = local_opUnion(res, stalagmite3);
+            res = local_opUnion(res, ground);
+            res = local_opUnion(res, pillar1);
+            res = local_opUnion(res, pillar2);
         
             return res;
         }
