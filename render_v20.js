@@ -324,10 +324,11 @@ const webgpuBackend = {
                 };
                 @group(0) @binding(0) var<uniform> u: Uniforms;
                 fn sdOctahedron(p: vec3f, s: f32) -> f32 {
-                    // 简化版的八面体 SDF
-                    let m = abs(p.x) + abs(p.y) + abs(p.z) - s;
-                    return m;
+                    // 标准八面体SDF
+                    p = abs(p);
+                    return (p.x + p.y + p.z - s) * 0.57735027;
                 }
+
                         
                 fn sdEllipsoid(p: vec3f, r: vec3f) -> f32 {
                     // 椭球 SDF
@@ -350,6 +351,7 @@ const webgpuBackend = {
                     return length(q) - t.y;
                 }
                 fn sdCylinder(p: vec3f, r: f32, h: f32) -> f32 {
+                    // 修正圆柱SDF
                     let d = abs(vec2f(length(p.xz), p.y)) - vec2f(r, h);
                     return min(max(d.x, d.y), 0.0) + length(max(d, vec2f(0.0)));
                 }
@@ -358,8 +360,10 @@ const webgpuBackend = {
                     return length(adjusted_p) - r;
                 }
                 fn sdCone(p: vec3f, c: vec2f) -> f32 {
-                    let q = length(p.xz);
-                    return dot(c, vec2f(q, p.y));
+                    // 标准圆锥SDF实现
+                    let q = vec2f(length(p.xz), p.y);
+                    let d = dot(c, vec2f(q.x, abs(q.y)));
+                    return max(d, abs(q.y) - c.y);
                 }
                 // 使用%运算符替代mod函数
                 fn opRep(p: vec3f, c: vec3f) -> vec3f {
@@ -630,25 +634,6 @@ const wgslScenes = {
     },
     cave : {
         map : `
-        // 修正的SDF函数
-        fn sdCone(p: vec3f, c: vec2f) -> f32 {
-            // 标准圆锥SDF实现
-            let q = vec2f(length(p.xz), p.y);
-            let d = dot(c, vec2f(q.x, abs(q.y)));
-            return max(d, abs(q.y) - c.y);
-        }
-
-        fn sdOctahedron(p: vec3f, s: f32) -> f32 {
-            // 标准八面体SDF
-            p = abs(p);
-            return (p.x + p.y + p.z - s) * 0.57735027;
-        }
-
-        fn sdCylinder(p: vec3f, r: f32, h: f32) -> f32 {
-            // 修正圆柱SDF
-            let d = abs(vec2f(length(p.xz), p.y)) - vec2f(r, h);
-            return min(max(d.x, d.y), 0.0) + length(max(d, vec2f(0.0)));
-        }
 
         fn map(p: vec3f) -> vec4f {
             // 地面 - 确保在y=0平面
