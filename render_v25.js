@@ -628,7 +628,7 @@ const wgslScenes = {
             var ro = vec3f(5.0 * cos(time), 3.0, 5.0 * sin(time));
         `
     },
-    dreamForest : {
+    cave : {
         map : `
         fn map(p: vec3f) -> vec4f {
             let p_rep = opRep(p, vec3f(6.0, 6.0, 6.0));
