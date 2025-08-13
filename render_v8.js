@@ -781,6 +781,8 @@ async function switchBackend(backendName) {
 
             if (backendName === 'webgl') {
                 animate(lastFrameTime);
+            } else {
+                loadingScreen.style.opacity = '0';
             }
 
             // 隐藏加载界面
