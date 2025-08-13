@@ -323,7 +323,17 @@ const webgpuBackend = {
                     max_steps: i32,
                 };
                 @group(0) @binding(0) var<uniform> u: Uniforms;
-                
+                fn sdOctahedron(p: vec3f, s: f32) -> f32 {
+                    // 简化版的八面体 SDF
+                    let m = abs(p.x) + abs(p.y) + abs(p.z) - s;
+                    return m;
+                }
+                        
+                fn sdEllipsoid(p: vec3f, r: vec3f) -> f32 {
+                    // 椭球 SDF
+                    return length(p / r) - 1.0;
+                }
+
                 // 基础形状函数
                 fn sdSphere(p: vec3f, s: f32) -> f32 {
                     return length(p) - s;
