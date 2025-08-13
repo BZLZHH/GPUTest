@@ -660,8 +660,8 @@
         // --- 初始化画布 ---
         function setupCanvas() {
             const dpr = window.devicePixelRatio || 1;
-            canvas.width = canvas.clientWidth * dpr * settings.resolutionScale;
-            canvas.height = canvas.clientHeight * dpr * settings.resolutionScale;
+            canvas.width = Math.max(1, canvas.clientWidth * dpr * settings.resolutionScale);
+            canvas.height = Math.max(1, canvas.clientHeight * dpr * settings.resolutionScale);
         }
 
         setupCanvas();
@@ -695,290 +695,6 @@
                 lastFrameTime = now;
             }
         }
-
-        // --- 着色器核心代码 ---
-        const scenes = {
-            crystal: {
-                map: `
-                    vec4 map(vec3 p) {
-                        // 水晶宫殿场景
-                        vec3 p_rep = opRep(p, vec3(4.0, 4.0, 4.0));
-
-                        // 主水晶结构
-                        vec4 mainCrystal = vec4(sdSphere(p_rep - vec3(0.0, 0.0, 0.0), 0.8), 1.0, 0.95, 0.0);
-
-                        // 地面
-                        vec4 ground = vec4(sdPlane(p), 2.0, 0.5, 0.0);
-
-                        // 辅助水晶结构
-                        vec4 crystal1 = vec4(sdSphere(p_rep - vec3(1.5, 0.5, 1.5), 0.5), 1.0, 0.92, 0.0);
-                        vec4 crystal2 = vec4(sdSphere(p_rep - vec3(-1.5, 0.7, -1.5), 0.6), 1.0, 0.9, 0.0);
-
-                        // 柱子
-                        vec4 pillar1 = vec4(sdCylinder(p - vec3(2.0, 0.0, 2.0), 0.3, 2.0), 3.0, 0.8, 0.0);
-                        vec4 pillar2 = vec4(sdCylinder(p - vec3(-2.0, 0.0, -2.0), 0.3, 2.0), 3.0, 0.8, 0.0);
-
-                        vec4 res = ground;
-                        res = opUnion(res, mainCrystal);
-                        res = opUnion(res, crystal1);
-                        res = opUnion(res, crystal2);
-                        res = opUnion(res, pillar1);
-                        res = opUnion(res, pillar2);
-
-                        return res;
-                    }
-                `,
-                getColor: `
-                    vec3 get_color(float mat_id) {
-                        if (mat_id < 1.5) {
-                            // 水晶材质
-                            return vec3(0.9, 0.95, 1.0);
-                        }
-                        if (mat_id < 2.5) {
-                            // 地面材质
-                            return vec3(0.7, 0.7, 0.8);
-                        }
-                        // 柱子材质
-                        return vec3(0.4, 0.6, 0.9);
-                    }
-                `,
-                cameraPath: `
-                    float time = u_time * 0.1;
-                    vec3 ro = vec3(5.0 * cos(time), 3.0, 5.0 * sin(time));
-                `
-            },
-            future: {
-                map: `
-                    vec4 map(vec3 p) {
-                        // 未来城市场景
-                        vec3 p_rep = opRep(p, vec3(6.0, 10.0, 6.0));
-
-                        // 建筑主体
-                        vec4 building1 = vec4(sdBox(p_rep - vec3(0.0, 2.0, 0.0), vec3(1.0, 3.0, 1.0)), 1.0, 0.85, 0.0);
-                        vec4 building2 = vec4(sdBox(p_rep - vec3(2.0, 3.0, 2.0), vec3(0.8, 4.0, 0.8)), 1.0, 0.8, 0.0);
-                        vec4 building3 = vec4(sdBox(p_rep - vec3(-2.0, 4.0, -2.0), vec3(0.6, 5.0, 0.6)), 1.0, 0.75, 0.0);
-
-                        // 地面
-                        vec4 ground = vec4(sdPlane(p), 2.0, 0.5, 0.0);
-
-                        // 飞行器
-                        vec4 aircraft = vec4(sdCapsule(p - vec3(0.0, 5.0 + sin(u_time * 0.5), 0.0), 1.0, 0.5), 3.0, 0.9, 0.0);
-
-                        vec4 res = ground;
-                        res = opUnion(res, building1);
-                        res = opUnion(res, building2);
-                        res = opUnion(res, building3);
-                        res = opUnion(res, aircraft);
-
-                        return res;
-                    }
-                `,
-                getColor: `
-                    vec3 get_color(float mat_id) {
-                        if (mat_id < 1.5) {
-                            // 建筑材质
-                            return vec3(0.9, 0.3, 0.2);
-                        }
-                        if (mat_id < 2.5) {
-                            // 地面材质
-                            return vec3(0.2, 0.2, 0.3);
-                        }
-                        // 飞行器材质
-                        return vec3(0.0, 0.8, 1.0);
-                    }
-                `,
-                cameraPath: `
-                    float time = u_time * 0.15;
-                    vec3 ro = vec3(8.0 * cos(time), 4.0, 8.0 * sin(time));
-                `
-            },
-            cave: {
-                map: `
-                    vec4 map(vec3 p) {
-                        // 神秘洞穴场景
-                        // 洞穴基础形状
-                        float cave = sdSphere(p, 8.0);
-
-                        // 钟乳石
-                        vec4 stalactite1 = vec4(sdCone(p - vec3(-2.0, 6.0, 1.0), vec2(0.5, 2.0)), 1.0, 0.7, 0.0);
-                        vec4 stalactite2 = vec4(sdCone(p - vec3(3.0, 5.0, -2.0), vec2(0.4, 1.8)), 1.0, 0.7, 0.0);
-                        vec4 stalactite3 = vec4(sdCone(p - vec3(-1.0, 7.0, -3.0), vec2(0.6, 2.2)), 1.0, 0.7, 0.0);
-
-                        // 石笋
-                        vec4 stalagmite1 = vec4(sdCone(p - vec3(2.0, -6.0, 0.0), vec2(0.5, 1.5)), 1.0, 0.7, 0.0);
-                        vec4 stalagmite2 = vec4(sdCone(p - vec3(-3.0, -5.5, 2.0), vec2(0.4, 1.3)), 1.0, 0.7, 0.0);
-
-                        // 地面
-                        vec4 ground = vec4(sdPlane(p + vec3(0.0, 6.5, 0.0)), 2.0, 0.6, 0.0);
-
-                        // 发光水晶
-                        vec4 crystal = vec4(sdSphere(p - vec3(0.0, 0.0, 0.0), 1.0), 3.0, 0.0, 1.0);
-
-                        vec4 res = vec4(cave, 0.0, 0.0, 0.0);
-                        res = opUnion(res, stalactite1);
-                        res = opUnion(res, stalactite2);
-                        res = opUnion(res, stalactite3);
-                        res = opUnion(res, stalagmite1);
-                        res = opUnion(res, stalagmite2);
-                        res = opUnion(res, ground);
-                        res = opUnion(res, crystal);
-
-                        return res;
-                    }
-                `,
-                getColor: `
-                    vec3 get_color(float mat_id) {
-                        if (mat_id < 1.5) {
-                            // 钟乳石/石笋材质
-                            return vec3(0.6, 0.5, 0.4);
-                        }
-                        if (mat_id < 2.5) {
-                            // 地面材质
-                            return vec3(0.3, 0.25, 0.2);
-                        }
-                        // 发光水晶材质
-                        return vec3(0.2, 1.0, 0.3);
-                    }
-                `,
-                cameraPath: `
-                    float time = u_time * 0.08;
-                    vec3 ro = vec3(10.0 * cos(time), 0.0, 10.0 * sin(time));
-                `
-            },
-            space: {
-                map: `
-                    vec4 map(vec3 p) {
-                        // 太空站场景
-                        // 主站体
-                        vec4 mainBody = vec4(sdTorus(p, vec2(3.0, 0.8)), 1.0, 0.9, 0.0);
-
-                        // 中心球体
-                        vec4 centerSphere = vec4(sdSphere(p, 1.5), 2.0, 0.85, 0.0);
-
-                        // 太阳能板
-                        vec4 solarPanel1 = vec4(sdBox(p - vec3(0.0, 0.0, 4.5), vec3(5.0, 0.1, 0.5)), 3.0, 0.0, 0.0);
-                        vec4 solarPanel2 = vec4(sdBox(p - vec3(0.0, 0.0, -4.5), vec3(5.0, 0.1, 0.5)), 3.0, 0.0, 0.0);
-
-                        // 对接舱
-                        vec4 dock1 = vec4(sdCylinder(p - vec3(3.0, 0.0, 0.0), 0.8, 2.0), 4.0, 0.8, 0.0);
-                        vec4 dock2 = vec4(sdCylinder(p - vec3(-3.0, 0.0, 0.0), 0.8, 2.0), 4.0, 0.8, 0.0);
-
-                        vec4 res = mainBody;
-                        res = opUnion(res, centerSphere);
-                        res = opUnion(res, solarPanel1);
-                        res = opUnion(res, solarPanel2);
-                        res = opUnion(res, dock1);
-                        res = opUnion(res, dock2);
-
-                        return res;
-                    }
-                `,
-                getColor: `
-                    vec3 get_color(float mat_id) {
-                        if (mat_id < 1.5) {
-                            // 主站体材质
-                            return vec3(0.8, 0.8, 0.9);
-                        }
-                        if (mat_id < 2.5) {
-                            // 中心球体材质
-                            return vec3(0.9, 0.9, 0.95);
-                        }
-                        if (mat_id < 3.5) {
-                            // 太阳能板材质
-                            return vec3(0.1, 0.1, 0.15);
-                        }
-                        // 对接舱材质
-                        return vec3(0.6, 0.7, 0.8);
-                    }
-                `,
-                cameraPath: `
-                    float time = u_time * 0.12;
-                    vec3 ro = vec3(8.0 * cos(time), 3.0 * sin(time * 0.5), 8.0 * sin(time));
-                `
-            }
-        };
-
-        const shaderCore = `
-            // 基础形状函数
-            float sdSphere(vec3 p, float s) {
-                return length(p) - s;
-            }
-
-            float sdPlane(vec3 p) {
-                return p.y;
-            }
-
-            float sdBox(vec3 p, vec3 b) {
-                vec3 q = abs(p) - b;
-                return length(max(q,0.0)) + min(max(q.x,max(q.y,q.z)),0.0);
-            }
-
-            float sdTorus(vec3 p, vec2 t) {
-                vec2 q = vec2(length(p.xz)-t.x,p.y);
-                return length(q)-t.y;
-            }
-
-            float sdCylinder(vec3 p, float r, float h) {
-                vec2 d = abs(vec2(length(p.xz), p.y)) - vec2(r, h);
-                return min(max(d.x, d.y), 0.0) + length(max(d, 0.0));
-            }
-
-            float sdCapsule(vec3 p, float h, float r) {
-                p.y -= clamp(p.y, 0.0, h);
-                return length(p) - r;
-            }
-
-            float sdCone(vec3 p, vec2 c) {
-                float q = length(p.xz);
-                return dot(c, vec2(q, p.y));
-            }
-
-            vec3 opRep(vec3 p, vec3 c) {
-                return mod(p, c) - 0.5 * c;
-            }
-
-            vec4 opUnion(vec4 a, vec4 b) {
-                return a.x < b.x ? a : b;
-            }
-
-            // 场景映射函数
-            {{MAP_FUNCTION}}
-
-            vec3 get_normal(vec3 p) {
-                vec2 e = vec2(0.001, 0.0);
-                vec3 n = vec3(
-                    map(p + e.xyy).x - map(p - e.xyy).x,
-                    map(p + e.yxy).x - map(p - e.yxy).x,
-                    map(p + e.yyx).x - map(p - e.yyx).x
-                );
-                return normalize(n);
-            }
-
-            // 材质颜色函数
-            {{COLOR_FUNCTION}}
-
-            float soft_shadow(vec3 ro, vec3 rd, float max_dist, float k, int steps) {
-                float res = 1.0;
-                float t = 0.01;
-                for (int i = 0; i < steps; i++) {
-                    if (t >= max_dist) { break; }
-                    float h = map(ro + rd * t).x;
-                    if (h < 0.001) { return 0.0; }
-                    res = min(res, k * h / t);
-                    t = t + h;
-                }
-                return res;
-            }
-
-            // 发光效果
-            vec3 get_emission(float mat_id, float glow) {
-                if (glow > 0.0) {
-                    if (mat_id < 1.5) { return vec3(0.2, 0.8, 0.3) * 3.0; }
-                    return vec3(0.8, 0.2, 0.1) * 2.0;
-                }
-                return vec3(0.0);
-            }
-        `;
 
         // --- WebGL 后端 ---
         const webglBackend = {
@@ -1177,8 +893,8 @@
                         return false;
                     }
 
-                    //const adapterInfo = await adapter.requestAdapterInfo();
-                    const gpuInfo = /*adapterInfo.description ||*/ '未知GPU';
+                    const adapterInfo = await adapter.requestAdapterInfo();
+                    const gpuInfo = adapterInfo.description || '未知GPU';
                     gpuInfoSpan.textContent = gpuInfo;
                     gpuModelSpan.textContent = gpuInfo;
 
@@ -1191,13 +907,7 @@
                         alphaMode: 'opaque'
                     });
 
-                    // 动态生成着色器
-                    const selectedScene = scenes[settings.scene] || scenes.crystal;
-                    let shaderCode = shaderCore
-                        .replace('{{MAP_FUNCTION}}', selectedScene.map)
-                        .replace('{{COLOR_FUNCTION}}', selectedScene.getColor);
-
-                    // 转换为WGSL
+                    // 使用WGSL语法重写着色器
                     const wgslShader = `
                         struct Uniforms {
                             resolution: vec2f,
@@ -1208,33 +918,143 @@
                         };
                         @group(0) @binding(0) var<uniform> u: Uniforms;
 
-                        ${shaderCode
-                            .replace(/vec3f/g, 'vec3<f32>')
-                            .replace(/vec2f/g, 'vec2<f32>')
-                            .replace(/vec4f/g, 'vec4<f32>')
-                            .replace(/float /g, 'fn ')
-                            .replace(/vec3 /g, 'vec3<f32> ')
-                            .replace(/vec2 /g, 'vec2<f32> ')
-                            .replace(/vec4 /g, 'vec4<f32> ')
-                            .replace(/mat3 /g, 'mat3x3<f32> ')
+                        // 基础形状函数
+                        fn sdSphere(p: vec3f, s: f32) -> f32 {
+                            return length(p) - s;
+                        }
+
+                        fn sdPlane(p: vec3f) -> f32 {
+                            return p.y;
+                        }
+
+                        fn sdBox(p: vec3f, b: vec3f) -> f32 {
+                            let q = abs(p) - b;
+                            return length(max(q, vec3f(0.0))) + min(max(q.x, max(q.y, q.z)), 0.0);
+                        }
+
+                        fn sdTorus(p: vec3f, t: vec2f) -> f32 {
+                            let q = vec2f(length(p.xz) - t.x, p.y);
+                            return length(q) - t.y;
+                        }
+
+                        fn sdCylinder(p: vec3f, r: f32, h: f32) -> f32 {
+                            let d = abs(vec2f(length(p.xz), p.y)) - vec2f(r, h);
+                            return min(max(d.x, d.y), 0.0) + length(max(d, vec2f(0.0)));
+                        }
+
+                        fn sdCapsule(p: vec3f, h: f32, r: f32) -> f32 {
+                            p.y = p.y - clamp(p.y, 0.0, h);
+                            return length(p) - r;
+                        }
+
+                        fn sdCone(p: vec3f, c: vec2f) -> f32 {
+                            let q = length(p.xz);
+                            return dot(c, vec2f(q, p.y));
+                        }
+
+                        fn opRep(p: vec3f, c: vec3f) -> vec3f {
+                            return mod(p, c) - 0.5 * c;
+                        }
+
+                        fn opUnion(a: vec4f, b: vec4f) -> vec4f {
+                            if (a.x < b.x) {
+                                return a;
+                            }
+                            return b;
+                        }
+
+                        // 水晶宫殿场景
+                        fn map(p: vec3f) -> vec4f {
+                            let p_rep = opRep(p, vec3f(4.0, 4.0, 4.0));
+
+                            // 主水晶结构
+                            let mainCrystal = vec4f(sdSphere(p_rep - vec3f(0.0, 0.0, 0.0), 0.8), 1.0, 0.95, 0.0);
+
+                            // 地面
+                            let ground = vec4f(sdPlane(p), 2.0, 0.5, 0.0);
+
+                            // 辅助水晶结构
+                            let crystal1 = vec4f(sdSphere(p_rep - vec3f(1.5, 0.5, 1.5), 0.5), 1.0, 0.92, 0.0);
+                            let crystal2 = vec4f(sdSphere(p_rep - vec3f(-1.5, 0.7, -1.5), 0.6), 1.0, 0.9, 0.0);
+
+                            // 柱子
+                            let pillar1 = vec4f(sdCylinder(p - vec3f(2.0, 0.0, 2.0), 0.3, 2.0), 3.0, 0.8, 0.0);
+                            let pillar2 = vec4f(sdCylinder(p - vec3f(-2.0, 0.0, -2.0), 0.3, 2.0), 3.0, 0.8, 0.0);
+
+                            var res = ground;
+                            res = opUnion(res, mainCrystal);
+                            res = opUnion(res, crystal1);
+                            res = opUnion(res, crystal2);
+                            res = opUnion(res, pillar1);
+                            res = opUnion(res, pillar2);
+
+                            return res;
+                        }
+
+                        fn get_normal(p: vec3f) -> vec3f {
+                            let e = vec2f(0.001, 0.0);
+                            let n = vec3f(
+                                map(p + e.xyy).x - map(p - e.xyy).x,
+                                map(p + e.yxy).x - map(p - e.yxy).x,
+                                map(p + e.yyx).x - map(p - e.yyx).x
+                            );
+                            return normalize(n);
+                        }
+
+                        fn get_color(mat_id: f32) -> vec3f {
+                            if (mat_id < 1.5) {
+                                // 水晶材质
+                                return vec3f(0.9, 0.95, 1.0);
+                            } else if (mat_id < 2.5) {
+                                // 地面材质
+                                return vec3f(0.7, 0.7, 0.8);
+                            }
+                            // 柱子材质
+                            return vec3f(0.4, 0.6, 0.9);
+                        }
+
+                        fn soft_shadow(ro: vec3f, rd: vec3f, max_dist: f32, k: f32, steps: i32) -> f32 {
+                            var res = 1.0;
+                            var t = 0.01;
+                            for (var i = 0; i < steps; i++) {
+                                if (t >= max_dist) { break; }
+                                let h = map(ro + rd * t).x;
+                                if (h < 0.001) { return 0.0; }
+                                res = min(res, k * h / t);
+                                t = t + h;
+                            }
+                            return res;
+                        }
+
+                        fn get_emission(mat_id: f32, glow: f32) -> vec3f {
+                            if (glow > 0.0) {
+                                if (mat_id < 1.5) {
+                                    return vec3f(0.2, 0.8, 0.3) * 3.0;
+                                }
+                                return vec3f(0.8, 0.2, 0.1) * 2.0;
+                            }
+                            return vec3f(0.0);
                         }
 
                         fn render(ro: vec3f, rd: vec3f) -> vec3f {
                             var final_color = vec3f(0.0);
                             var accum = vec3f(1.0);
 
-                            for (var i = 0; i < u.bounces + 1; i = i + 1) {
+                            for (var i = 0; i < 10; i++) {
+                                if (i >= u.bounces) { break; }
+
                                 var t = 0.0;
                                 var hit_pos: vec3f;
                                 var scene_info: vec4f;
 
-                                for (var j = 0; j < u.max_steps; j = j + 1) {
+                                for (var j = 0; j < 200; j++) {
+                                    if (j >= u.max_steps) { break; }
                                     hit_pos = ro + rd * t;
                                     scene_info = map(hit_pos);
                                     if (scene_info.x < 0.001 || t > 100.0) {
                                         break;
                                     }
-                                    t = t + scene_info.x;
+                                    t += scene_info.x;
                                 }
 
                                 if (scene_info.x < 0.001) {
@@ -1244,24 +1064,26 @@
                                     var diffuse = max(0.0, dot(normal, light_dir));
 
                                     let shadow = soft_shadow(hit_pos + normal * 0.01, light_dir, 10.0, f32(u.shadow_quality), u.shadow_quality);
-                                    diffuse = diffuse * shadow;
+                                    diffuse *= shadow;
 
                                     let base_color = get_color(scene_info.y);
                                     let emission = get_emission(scene_info.y, scene_info.w);
 
-                                    final_color = final_color + accum * (base_color * (diffuse + 0.1) + emission);
+                                    final_color += accum * (base_color * (diffuse + 0.1) + emission);
 
+                                    // 反射
                                     if (scene_info.z > 0.0) {
-                                        accum = accum * scene_info.z * base_color;
+                                        accum *= scene_info.z * base_color;
                                         ro = hit_pos + normal * 0.01;
                                         rd = reflect(rd, normal);
                                     } else {
                                         break;
                                     }
                                 } else {
+                                    // 天空颜色
                                     var sky_color = vec3f(0.05, 0.08, 0.12);
                                     sky_color = mix(sky_color, vec3f(0.3, 0.5, 0.8), smoothstep(0.0, 0.5, rd.y));
-                                    final_color = final_color + accum * sky_color;
+                                    final_color += accum * sky_color;
                                     break;
                                 }
                             }
@@ -1281,25 +1103,36 @@
                         fn fs_main(@builtin(position) frag_coord: vec4f) -> @location(0) vec4f {
                             let uv = (frag_coord.xy - 0.5 * u.resolution.xy) / u.resolution.y;
 
-                            ${selectedScene.cameraPath}
+                            // 相机动画
+                            let time = u.time * 0.1;
+                            var ro = vec3f(5.0 * cos(time), 3.0, 5.0 * sin(time));
                             let look_at = vec3f(0.0, 0.0, 0.0);
 
                             let f = normalize(look_at - ro);
-                            let r = normalize(cross(vec3f(0,1,0), f));
+                            let r = normalize(cross(vec3f(0.0, 1.0, 0.0), f));
                             let u_vec = cross(f, r);
                             let rd = normalize(f + uv.x * r + uv.y * u_vec);
 
                             let color = render(ro, rd);
-                            color = pow(color, vec3f(0.4545));
-                            return vec4f(color, 1.0);
+
+                            // 色调映射和伽马校正
+                            let final_color = pow(color, vec3f(0.4545));
+                            return vec4f(final_color, 1.0);
                         }
                     `;
 
-                    const shaderModule = this.device.createShaderModule({ code: wgslShader });
+                    const shaderModule = this.device.createShaderModule({
+                        label: 'Ray Tracing Shader',
+                        code: wgslShader
+                    });
 
                     this.pipeline = this.device.createRenderPipeline({
+                        label: 'Ray Tracing Pipeline',
                         layout: 'auto',
-                        vertex: { module: shaderModule, entryPoint: 'vs_main' },
+                        vertex: {
+                            module: shaderModule,
+                            entryPoint: 'vs_main'
+                        },
                         fragment: {
                             module: shaderModule,
                             entryPoint: 'fs_main',
@@ -1311,13 +1144,18 @@
                     });
 
                     this.uniformBuffer = this.device.createBuffer({
-                        size: 6 * 4,
+                        label: 'Uniform Buffer',
+                        size: 6 * 4, // 6个32位值
                         usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
                     });
 
                     this.bindGroup = this.device.createBindGroup({
+                        label: 'Bind Group',
                         layout: this.pipeline.getBindGroupLayout(0),
-                        entries: [{ binding: 0, resource: { buffer: this.uniformBuffer } }]
+                        entries: [{
+                            binding: 0,
+                            resource: { buffer: this.uniformBuffer }
+                        }]
                     });
 
                     return true;
@@ -1362,11 +1200,189 @@
             },
 
             cleanup() {
-                if (this.device) {
-                    this.device.destroy();
-                }
+                // WebGPU资源会自动垃圾回收
             }
         };
+
+        // --- 场景定义 ---
+        const scenes = {
+            crystal: {
+                map: `
+                    vec4 map(vec3 p) {
+                        // 水晶宫殿场景
+                        vec3 p_rep = opRep(p, vec3(4.0, 4.0, 4.0));
+
+                        // 主水晶结构
+                        vec4 mainCrystal = vec4(sdSphere(p_rep - vec3(0.0, 0.0, 0.0), 0.8), 1.0, 0.95, 0.0);
+
+                        // 地面
+                        vec4 ground = vec4(sdPlane(p), 2.0, 0.5, 0.0);
+
+                        // 辅助水晶结构
+                        vec4 crystal1 = vec4(sdSphere(p_rep - vec3(1.5, 0.5, 1.5), 0.5), 1.0, 0.92, 0.0);
+                        vec4 crystal2 = vec4(sdSphere(p_rep - vec3(-1.5, 0.7, -1.5), 0.6), 1.0, 0.9, 0.0);
+
+                        // 柱子
+                        vec4 pillar1 = vec4(sdCylinder(p - vec3(2.0, 0.0, 2.0), 0.3, 2.0), 3.0, 0.8, 0.0);
+                        vec4 pillar2 = vec4(sdCylinder(p - vec3(-2.0, 0.0, -2.0), 0.3, 2.0), 3.0, 0.8, 0.0);
+
+                        vec4 res = ground;
+                        res = opUnion(res, mainCrystal);
+                        res = opUnion(res, crystal1);
+                        res = opUnion(res, crystal2);
+                        res = opUnion(res, pillar1);
+                        res = opUnion(res, pillar2);
+
+                        return res;
+                    }
+                `,
+                getColor: `
+                    vec3 get_color(float mat_id) {
+                        if (mat_id < 1.5) {
+                            // 水晶材质
+                            return vec3(0.9, 0.95, 1.0);
+                        }
+                        if (mat_id < 2.5) {
+                            // 地面材质
+                            return vec3(0.7, 0.7, 0.8);
+                        }
+                        // 柱子材质
+                        return vec3(0.4, 0.6, 0.9);
+                    }
+                `,
+                cameraPath: `
+                    float time = u_time * 0.1;
+                    vec3 ro = vec3(5.0 * cos(time), 3.0, 5.0 * sin(time));
+                `
+            },
+            future: {
+                map: `
+                    vec4 map(vec3 p) {
+                        // 未来城市场景
+                        vec3 p_rep = opRep(p, vec3(6.0, 10.0, 6.0));
+
+                        // 建筑主体
+                        vec4 building1 = vec4(sdBox(p_rep - vec3(0.0, 2.0, 0.0), vec3(1.0, 3.0, 1.0)), 1.0, 0.85, 0.0);
+                        vec4 building2 = vec4(sdBox(p_rep - vec3(2.0, 3.0, 2.0), vec3(0.8, 4.0, 0.8)), 1.0, 0.8, 0.0);
+                        vec4 building3 = vec4(sdBox(p_rep - vec3(-2.0, 4.0, -2.0), vec3(0.6, 5.0, 0.6)), 1.0, 0.75, 0.0);
+
+                        // 地面
+                        vec4 ground = vec4(sdPlane(p), 2.0, 0.5, 0.0);
+
+                        // 飞行器
+                        vec4 aircraft = vec4(sdCapsule(p - vec3(0.0, 5.0 + sin(u_time * 0.5), 0.0), 1.0, 0.5), 3.0, 0.9, 0.0);
+
+                        vec4 res = ground;
+                        res = opUnion(res, building1);
+                        res = opUnion(res, building2);
+                        res = opUnion(res, building3);
+                        res = opUnion(res, aircraft);
+
+                        return res;
+                    }
+                `,
+                getColor: `
+                    vec3 get_color(float mat_id) {
+                        if (mat_id < 1.5) {
+                            // 建筑材质
+                            return vec3(0.9, 0.3, 0.2);
+                        }
+                        if (mat_id < 2.5) {
+                            // 地面材质
+                            return vec3(0.2, 0.2, 0.3);
+                        }
+                        // 飞行器材质
+                        return vec3(0.0, 0.8, 1.0);
+                    }
+                `,
+                cameraPath: `
+                    float time = u_time * 0.15;
+                    vec3 ro = vec3(8.0 * cos(time), 4.0, 8.0 * sin(time));
+                `
+            }
+        };
+
+        const shaderCore = `
+            // 基础形状函数
+            float sdSphere(vec3 p, float s) {
+                return length(p) - s;
+            }
+
+            float sdPlane(vec3 p) {
+                return p.y;
+            }
+
+            float sdBox(vec3 p, vec3 b) {
+                vec3 q = abs(p) - b;
+                return length(max(q,0.0)) + min(max(q.x,max(q.y,q.z)),0.0);
+            }
+
+            float sdTorus(vec3 p, vec2 t) {
+                vec2 q = vec2(length(p.xz)-t.x,p.y);
+                return length(q)-t.y;
+            }
+
+            float sdCylinder(vec3 p, float r, float h) {
+                vec2 d = abs(vec2(length(p.xz), p.y)) - vec2(r, h);
+                return min(max(d.x, d.y), 0.0) + length(max(d, 0.0));
+            }
+
+            float sdCapsule(vec3 p, float h, float r) {
+                p.y -= clamp(p.y, 0.0, h);
+                return length(p) - r;
+            }
+
+            float sdCone(vec3 p, vec2 c) {
+                float q = length(p.xz);
+                return dot(c, vec2(q, p.y));
+            }
+
+            vec3 opRep(vec3 p, vec3 c) {
+                return mod(p, c) - 0.5 * c;
+            }
+
+            vec4 opUnion(vec4 a, vec4 b) {
+                return a.x < b.x ? a : b;
+            }
+
+            // 场景映射函数
+            {{MAP_FUNCTION}}
+
+            vec3 get_normal(vec3 p) {
+                vec2 e = vec2(0.001, 0.0);
+                vec3 n = vec3(
+                    map(p + e.xyy).x - map(p - e.xyy).x,
+                    map(p + e.yxy).x - map(p - e.yxy).x,
+                    map(p + e.yyx).x - map(p - e.yyx).x
+                );
+                return normalize(n);
+            }
+
+            // 材质颜色函数
+            {{COLOR_FUNCTION}}
+
+            float soft_shadow(vec3 ro, vec3 rd, float max_dist, float k, int steps) {
+                float res = 1.0;
+                float t = 0.01;
+                for (int i = 0; i < steps; i++) {
+                    if (t >= max_dist) { break; }
+                    float h = map(ro + rd * t).x;
+                    if (h < 0.001) { return 0.0; }
+                    res = min(res, k * h / t);
+                    t = t + h;
+                }
+                return res;
+            }
+
+            // 发光效果
+            vec3 get_emission(float mat_id, float glow) {
+                if (glow > 0.0) {
+                    if (mat_id < 1.5) { return vec3(0.2, 0.8, 0.3) * 3.0; }
+                    return vec3(0.8, 0.2, 0.1) * 2.0;
+                }
+                return vec3(0.0);
+            }
+        `;
 
         // --- 主逻辑 ---
         async function switchBackend(backendName) {
@@ -1374,6 +1390,7 @@
             if (currentBackend?.cleanup) currentBackend.cleanup();
 
             loadingScreen.style.display = 'flex';
+            loadingScreen.style.opacity = '1';
             renderStatusSpan.textContent = "初始化中...";
             statusIndicator.className = "status-indicator status-good";
 
@@ -1441,6 +1458,8 @@
             shadowValueSpan.textContent = settings.shadowQuality;
             stepsValueSpan.textContent = settings.maxSteps;
             resolutionValueSpan.textContent = parseInt(resolutionSlider.value) + "%";
+
+            setupCanvas();
 
             // 重新初始化后端以应用新设置
             if (currentBackend) {
@@ -1512,9 +1531,9 @@
         if (navigator.gpu) {
             navigator.gpu.requestAdapter().then(adapter => {
                 if (adapter) {
-                    //adapter.requestAdapterInfo().then(info => {
-                        gpuModelSpan.textContent = /*info.description || */'未知GPU';
-                    //});
+                    adapter.requestAdapterInfo().then(info => {
+                        gpuModelSpan.textContent = info.description || '未知GPU';
+                    });
                 }
             });
         }
