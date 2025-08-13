@@ -513,9 +513,10 @@ const webgpuBackend = {
             });
             this.uniformBuffer = this.device.createBuffer({
                 label : 'Uniform Buffer',
-                size : 6 * 4, // 6个32位值
+                size : 6 * 4, // 24 bytes (6个32位值)
                 usage : GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
             });
+
             this.bindGroup = this.device.createBindGroup({
                 label : 'Bind Group',
                 layout : this.pipeline.getBindGroupLayout(0),
@@ -532,14 +533,19 @@ const webgpuBackend = {
     render(time) {
         if (!this.device) return;
 
-        const uniformData = new Float32Array(6);
-        const uniformDataAsInt = new Int32Array(uniformData.buffer);
-        uniformData[0] = canvas.width;
-        uniformData[1] = canvas.height;
-        uniformData[2] = time * 0.001;
-        uniformDataAsInt[3] = settings.bounces;
-        uniformDataAsInt[4] = settings.shadowQuality;
-        uniformDataAsInt[5] = settings.maxSteps;
+        // 使用 DataView 确保正确的数据类型
+        const uniformBufferSize = 6 * 4; // 6个32位值 = 24字节
+        const uniformData = new ArrayBuffer(uniformBufferSize);
+        const uniformDataView = new DataView(uniformData);
+
+        uniformDataView.setFloat32(0, canvas.width, true);  // u_resolution.x
+        uniformDataView.setFloat32(4, canvas.height, true); // u_resolution.y
+        uniformDataView.setFloat32(8, time * 0.001, true);  // u_time
+
+        // 整数部分使用 setInt32
+        uniformDataView.setInt32(12, settings.bounces, true);       // u_bounces
+        uniformDataView.setInt32(16, settings.shadowQuality, true); // u_shadow_quality
+        uniformDataView.setInt32(20, settings.maxSteps, true);      // u_max_steps
 
         this.device.queue.writeBuffer(this.uniformBuffer, 0, uniformData);
 
@@ -564,8 +570,16 @@ const webgpuBackend = {
     },
 
     cleanup() {
-        // WebGPU资源会自动垃圾回收
+        if (this.device) {
+            this.device.destroy();
+            this.device = null;
+        }
+        this.context = null;
+        this.pipeline = null;
+        this.uniformBuffer = null;
+        this.bindGroup = null;
     }
+
 };
 
 // --- 场景定义 ---
@@ -751,9 +765,15 @@ const shaderCore = `
 
 // --- 主逻辑 ---
 async function switchBackend(backendName) {
+    if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+    }
 
-    if (animationFrameId) cancelAnimationFrame(animationFrameId);
-    if (currentBackend?.cleanup) currentBackend.cleanup();
+    // 正确清理当前后端
+    if (currentBackend?.cleanup) {
+        currentBackend.cleanup();
+    }
     if (!isPaused) {
         loadingScreen.style.display = 'flex';
         loadingScreen.style.opacity = '1';
@@ -825,7 +845,10 @@ function animate(now) {
     animationFrameId = requestAnimationFrame(animate);
 }
 
-function onSettingsChange() {
+function onSettingsChange(forceReinit = false) {
+    const oldResolution = settings.resolutionScale;
+    const oldScene = settings.scene;
+
     settings.bounces = parseInt(bouncesSlider.value);
     settings.shadowQuality = parseInt(shadowSlider.value);
     settings.maxSteps = parseInt(stepsSlider.value);
@@ -838,16 +861,21 @@ function onSettingsChange() {
 
     setupCanvas();
 
-    // 重新初始化后端以应用新设置
-    if (currentBackend) {
+    // 只在必要时重新初始化
+    const resolutionChanged = oldResolution !== settings.resolutionScale;
+    const sceneChanged = oldScene !== settings.scene;
+
+    if ((resolutionChanged || sceneChanged || forceReinit) && currentBackend) {
         switchBackend(backendSelector.value);
     }
 }
 
 function onShaderChange() {
     settings.scene = shaderSelector.value;
+
+    // 强制重新初始化以更新着色器
     if (currentBackend) {
-        switchBackend(backendSelector.value);
+        onSettingsChange(true);
     }
 }
 
