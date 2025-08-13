@@ -630,81 +630,80 @@ const wgslScenes = {
     },
     cave : {
         map : `
-
+        fn sdSphere(p: vec3f, s: f32) -> f32 { return length(p) - s; }
+        fn sdPlane(p: vec3f) -> f32 { return p.y; }
+        fn sdCylinder(p: vec3f, r: f32, h: f32) -> f32 {
+            let d = abs(vec2f(length(p.xz), p.y)) - vec2f(r, h);
+            return min(max(d.x, d.y), 0.0) + length(max(d, vec2f(0.0)));
+        }
+        fn sdCone(p: vec3f, c: vec2f) -> f32 {
+            let q = length(p.xz);
+            return dot(c, vec2f(q, p.y));
+        }
+        fn sdBox(p: vec3f, b: vec3f) -> f32 {
+            let q = abs(p) - b;
+            return length(max(q, vec3f(0.0))) + min(max(q.x, max(q.y, q.z)), 0.0);
+        }
+        fn opRep(p: vec3f, c: vec3f) -> vec3f { return p % c - 0.5 * c; }
+        fn opUnion(a: vec4f, b: vec4f) -> vec4f { if (a.x < b.x) { return a; } return b; }
+        
         fn map(p: vec3f) -> vec4f {
-            // 地面 - 确保在y=0平面
-            let ground = vec4f(p.y + 3.0, 1.0, 0.5, 0.0); // 提高地面到y=-3
-            
-            // 石笋阵列 - 位置调整到地面附近
-            let stalagmite1 = vec4f(sdCone(p - vec3f(1.5, -2.8, 0.0), vec2f(0.5, 1.8)), 2.0, 0.8, 0.0);
-            let stalagmite2 = vec4f(sdCone(p - vec3f(-2.0, -2.9, -1.5), vec2f(0.6, 2.0)), 2.0, 0.8, 0.0);
-            let stalagmite3 = vec4f(sdCone(p - vec3f(0.0, -3.0, 2.0), vec2f(0.4, 1.5)), 2.0, 0.8, 0.0);
-            
-            // 钟乳石阵列 - 位置调整到洞顶
-            let stalactite1 = vec4f(sdCone(vec3f(p.x, -p.y - 5.0, p.z), vec2f(0.7, 1.5)), 3.0, 0.8, 0.0);
-            let stalactite2 = vec4f(sdCone(vec3f(p.x+2.5, -p.y - 5.5, p.z-1.0), vec2f(0.5, 1.2)), 3.0, 0.8, 0.0);
-            let stalactite3 = vec4f(sdCone(vec3f(p.x-1.5, -p.y - 4.8, p.z+1.5), vec2f(0.6, 1.8)), 3.0, 0.8, 0.0);
-            
-            // 水晶簇 - 位置调整到可见区域
-            let crystal1 = vec4f(sdOctahedron(p - vec3f(1.0, -1.0, 0.0), 0.6), 4.0, 0.95, 0.8);
-            let crystal2 = vec4f(sdOctahedron(p - vec3f(-1.5, -0.8, 1.2), 0.4), 4.0, 0.95, 0.8);
-            let crystal3 = vec4f(sdOctahedron(p - vec3f(0.5, -0.5, -1.5), 0.5), 4.0, 0.95, 0.8);
-            
-            // 发光水晶柱 - 中心位置
-            let glowColumn = vec4f(sdCylinder(p - vec3f(0.0, -1.0, 0.0), 0.3, 1.0), 5.0, 0.9, 1.5);
-            
-            var res = ground;
+            // 洞穴基础结构
+            let cave = vec4f(sdSphere(p, 12.0), 1.0, 0.5, 0.0);
+        
+            // 石笋阵列
+            let stalagmite1 = vec4f(sdCone(p - vec3f(2.0, 0.0, 2.0), vec2f(0.5, 3.0)), 3.0, 0.7, 0.0);
+            let stalagmite2 = vec4f(sdCone(p - vec3f(-2.0, 0.0, -2.0), vec2f(0.3, 2.0)), 3.0, 0.65, 0.0);
+            let stalagmite3 = vec4f(sdCone(p - vec3f(1.0, 0.0, -3.0), vec2f(0.4, 2.5)), 3.0, 0.7, 0.0);
+        
+            // 地面
+            let ground = vec4f(sdPlane(p), 2.0, 0.6, 0.0);
+        
+            // 石柱/岩石
+            let pillar1 = vec4f(sdCylinder(p - vec3f(3.0, 0.0, -1.0), 0.4, 4.0), 4.0, 0.8, 0.0);
+            let pillar2 = vec4f(sdCylinder(p - vec3f(-3.0, 0.0, 1.0), 0.5, 3.5), 4.0, 0.75, 0.0);
+        
+            // 合并所有元素
+            var res = cave;
             res = opUnion(res, stalagmite1);
             res = opUnion(res, stalagmite2);
             res = opUnion(res, stalagmite3);
-            res = opUnion(res, stalactite1);
-            res = opUnion(res, stalactite2);
-            res = opUnion(res, stalactite3);
-            res = opUnion(res, crystal1);
-            res = opUnion(res, crystal2);
-            res = opUnion(res, crystal3);
-            res = opUnion(res, glowColumn);
-            
+            res = opUnion(res, ground);
+            res = opUnion(res, pillar1);
+            res = opUnion(res, pillar2);
+        
             return res;
         }
-    `,
+        `,
         getColor : `
         fn get_color(mat_id: f32) -> vec3f {
-            if (mat_id < 1.5) {
-                return vec3f(0.35, 0.3, 0.25); // 地面
-            }
-            if (mat_id < 2.5) {
-                return vec3f(0.85, 0.8, 0.75); // 石笋
-            }
-            if (mat_id < 3.5) {
-                return vec3f(0.8, 0.78, 0.7);  // 钟乳石
-            }
-            if (mat_id < 4.5) {
-                return vec3f(0.7, 0.9, 1.0);   // 水晶
-            }
-            return vec3f(0.1, 0.8, 0.6);       // 发光柱
+            if (mat_id < 1.5) { return vec3f(0.1, 0.1, 0.15); } // 洞穴墙壁
+            if (mat_id < 2.5) { return vec3f(0.3, 0.25, 0.2); } // 地面
+            if (mat_id < 3.5) { return vec3f(0.6, 0.5, 0.4); } // 石笋
+            return vec3f(0.4, 0.35, 0.3); // 石柱
         }
-    `,
+        `,
         getEmission : `
         fn get_emission(mat_id: f32, glow: f32) -> vec3f {
-            if (mat_id > 4.5) {
-                return vec3f(0.1, 0.9, 0.7) * 6.0 * glow;
-            }
-            if (mat_id > 3.5 && mat_id < 4.5) {
-                return vec3f(0.6, 0.9, 1.0) * 0.8 * glow;
+            if (glow > 0.0) {
+                if (mat_id < 3.5) {
+                    return vec3f(0.0, 0.3, 0.6) * 2.0; // 石笋荧光
+                }
+                return vec3f(0.1, 0.05, 0.0) * 1.5; // 石柱微光
             }
             return vec3f(0.0);
         }
-    `,
+        `,
         cameraPath : `
-        let time = u.time * 0.1;
+        let time = u.time * 0.12;
         var ro = vec3f(
-            3.0 * cos(time),
-            0.0,  // 降低相机高度
-            3.0 * sin(time)
+            8.0 * cos(time),
+            2.5 + 1.5 * sin(time * 0.5),
+            8.0 * sin(time)
         );
-    `
+        `
     },
+
     space : {
         map : `
         fn map(p: vec3f) -> vec4f {
