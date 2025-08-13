@@ -908,7 +908,11 @@ const wgslScenes = {
     fn get_emission(mat_id: f32, glow: f32) -> vec3f {
         if (mat_id < 8.5 && mat_id > 7.5) {
             // 窗户 - 随机闪烁效果
-            let flicker = fract(sin(u.time * 10.0) > 0.3 ? 1.0 : 0.8;
+            var flicker: f32 = 1.0;
+            let s = sin(u.time * 10.0);
+            if (fract(s) > 0.3) {
+                flicker -= 0.2;
+            }
             return vec3f(1.0, 0.9, 0.7) * 3.0 * flicker;
         }
         if (mat_id < 9.5 && mat_id > 8.5) {
