@@ -86,7 +86,7 @@ const webglBackend = {
         }
 
         const debugInfo = this.gl.getExtension('WEBGL_debug_renderer_info');
-        const gpuInfo = debugInfo ? this.gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : '未知GPU';
+        const gpuInfo = debugInfo ? this.gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : 'GPU';
         gpuInfoSpan.textContent = gpuInfo;
         gpuModelSpan.textContent = gpuInfo;
 
@@ -272,7 +272,7 @@ const webgpuBackend = {
                 console.error('No WebGPU adapter found!');
                 return false;
             }
-            const gpuInfo = '未知GPU';
+            const gpuInfo = 'GPU';
             gpuInfoSpan.textContent = gpuInfo;
             gpuModelSpan.textContent = gpuInfo;
             this.device = await adapter.requestDevice();
@@ -398,17 +398,17 @@ const webgpuBackend = {
                 fn render(ro: vec3f, rd: vec3f) -> vec3f {
                     var local_ro: vec3f = ro;            // 可变副本
                     var local_rd: vec3f = rd;            // 可变副本
-                        
+
                     var final_color: vec3f = vec3f(0.0);
                     var accum: vec3f = vec3f(1.0);
-                        
+
                     for (var i: i32 = 0; i < 10; i = i + 1) {
                         if (i >= i32(u.bounces)) { break; }
-                        
+
                         var t: f32 = 0.0;
                         var hit_pos: vec3f = vec3f(0.0);
                         var scene_info: vec4f = vec4f(0.0);
-                        
+
                         for (var j: i32 = 0; j < 200; j = j + 1) {
                             if (j >= i32(u.max_steps)) { break; }
                             hit_pos = local_ro + local_rd * t;
@@ -418,7 +418,7 @@ const webgpuBackend = {
                             }
                             t = t + scene_info.x;
                         }
-                        
+
                         if (scene_info.x < 0.001) {
                             let normal = get_normal(hit_pos);
                             let light_pos = vec3f(2.0, 5.0, -3.0);
@@ -429,7 +429,7 @@ const webgpuBackend = {
                             let base_color = get_color(scene_info.y);
                             let emission = get_emission(scene_info.y, scene_info.w);
                             final_color = final_color + accum * (base_color * (diffuse + 0.1) + emission);
-                        
+
                             // 反射：改变 local_ro/local_rd（而不是参数）
                             if (scene_info.z > 0.0) {
                                 accum = accum * scene_info.z * base_color;
@@ -446,7 +446,7 @@ const webgpuBackend = {
                             break;
                         }
                     }
-                
+
                     return final_color;
                 }
 
@@ -720,150 +720,174 @@ const shaderCore = `
             }
         `;
 
+function replaceCanvasAndSetup(size = {
+    w : 800,
+    h : 600
+}) {
+    const old = document.getElementById('canvas');
+    const parent = old.parentNode;
+    const newCanvas = document.createElement('canvas');
+
+    // 保留 id/attrs/样式/尺寸
+    newCanvas.id = old.id;
+    newCanvas.width = old.width || size.w;
+    newCanvas.height = old.height || size.h;
+    newCanvas.style.cssText = old.style.cssText;
+    // 如果你用了其他 data-* 属性，可以拷贝
+
+    parent.replaceChild(newCanvas, old);
+    return newCanvas;
+}
+
 // --- 主逻辑 ---
 async function switchBackend(backendName) {
-    if (animationFrameId) cancelAnimationFrame(animationFrameId);
-    if (currentBackend?.cleanup) currentBackend.cleanup();
 
-    loadingScreen.style.display = 'flex';
-    loadingScreen.style.opacity = '1';
-    renderStatusSpan.textContent = "初始化中...";
-    statusIndicator.className = "status-indicator status-good";
+    async function switchBackendNoReload(backendName) {
+        if (animationFrameId) cancelAnimationFrame(animationFrameId);
+        if (currentBackend?.cleanup) currentBackend.cleanup();
 
-    setupCanvas();
+        // 替换 canvas（确保没有旧 context）
+        const newCanvas = replaceCanvasAndSetup({w : 800, h : 600});
+        // 重新 run setupCanvas() 或把 setupCanvas 里对 canvas 的引用更新为 newCanvas
+        setupCanvas(); // 确保这个函数会重新读取 document.getElementById('canvas')
 
-    try {
-        currentBackend = backendName === 'webgl' ? webglBackend : webgpuBackend;
-        const success = await (currentBackend === webgpuBackend ? webgpuBackend.init() : webglBackend.init());
+        loadingScreen.style.display = 'flex';
+        loadingScreen.style.opacity = '1';
+        renderStatusSpan.textContent = "初始化中...";
+        statusIndicator.className = "status-indicator status-good";
 
-        if (success) {
-            lastFrameTime = performance.now();
-            frameCount = 0;
-            startTime = lastFrameTime;
-            renderStatusSpan.textContent = "渲染中...";
-            statusIndicator.className = "status-indicator status-optimal";
-            animate(lastFrameTime);
+        try {
+            currentBackend = backendName === 'webgl' ? webglBackend : webgpuBackend;
+            const success = await (currentBackend === webgpuBackend ? webgpuBackend.init() : webglBackend.init());
 
-            // 隐藏加载界面
-            setTimeout(() => {
-                loadingScreen.style.opacity = '0';
-                setTimeout(() => { loadingScreen.style.display = 'none'; }, 500);
-            }, 500);
-        } else {
-            renderStatusSpan.textContent = "初始化失败";
+            if (success) {
+                lastFrameTime = performance.now();
+                frameCount = 0;
+                startTime = lastFrameTime;
+                renderStatusSpan.textContent = "渲染中...";
+                statusIndicator.className = "status-indicator status-optimal";
+                animate(lastFrameTime);
+
+                // 隐藏加载界面
+                setTimeout(() => {
+                    loadingScreen.style.opacity = '0';
+                    setTimeout(() => { loadingScreen.style.display = 'none'; }, 500);
+                }, 500);
+            } else {
+                renderStatusSpan.textContent = "初始化失败";
+                statusIndicator.className = "status-indicator status-high";
+                loadingScreen.style.display = 'none';
+            }
+        }
+        catch (error) {
+            console.error("后端初始化错误:", error);
+            renderStatusSpan.textContent = "错误: " + error.message;
             statusIndicator.className = "status-indicator status-high";
             loadingScreen.style.display = 'none';
         }
     }
-    catch (error) {
-        console.error("后端初始化错误:", error);
-        renderStatusSpan.textContent = "错误: " + error.message;
-        statusIndicator.className = "status-indicator status-high";
-        loadingScreen.style.display = 'none';
+
+    function animate(now) {
+        updateFPS(now);
+
+        try {
+            if (currentBackend && currentBackend.render) {
+                currentBackend.render(now - startTime);
+            }
+        }
+        catch (error) {
+            console.error("渲染错误:", error);
+            renderStatusSpan.textContent = "渲染错误: " + error.message;
+            statusIndicator.className = "status-indicator status-high";
+            cancelAnimationFrame(animationFrameId);
+            return;
+        }
+
+        animationFrameId = requestAnimationFrame(animate);
     }
-}
 
-function animate(now) {
-    updateFPS(now);
+    function onSettingsChange() {
+        settings.bounces = parseInt(bouncesSlider.value);
+        settings.shadowQuality = parseInt(shadowSlider.value);
+        settings.maxSteps = parseInt(stepsSlider.value);
+        settings.resolutionScale = parseInt(resolutionSlider.value) / 100;
 
-    try {
-        if (currentBackend && currentBackend.render) {
-            currentBackend.render(now - startTime);
+        bouncesValueSpan.textContent = settings.bounces;
+        shadowValueSpan.textContent = settings.shadowQuality;
+        stepsValueSpan.textContent = settings.maxSteps;
+        resolutionValueSpan.textContent = parseInt(resolutionSlider.value) + "%";
+
+        setupCanvas();
+
+        // 重新初始化后端以应用新设置
+        if (currentBackend) {
+            switchBackend(backendSelector.value);
         }
     }
-    catch (error) {
-        console.error("渲染错误:", error);
-        renderStatusSpan.textContent = "渲染错误: " + error.message;
-        statusIndicator.className = "status-indicator status-high";
-        cancelAnimationFrame(animationFrameId);
-        return;
+
+    function onShaderChange() {
+        settings.scene = shaderSelector.value;
+        if (currentBackend) {
+            switchBackend(backendSelector.value);
+        }
     }
 
-    animationFrameId = requestAnimationFrame(animate);
-}
+    function onShaderPreset(e) {
+        shaderPresets.forEach(btn => btn.classList.remove('active'));
+        e.target.classList.add('active');
 
-function onSettingsChange() {
-    settings.bounces = parseInt(bouncesSlider.value);
-    settings.shadowQuality = parseInt(shadowSlider.value);
-    settings.maxSteps = parseInt(stepsSlider.value);
-    settings.resolutionScale = parseInt(resolutionSlider.value) / 100;
+        if (e.target.dataset.preset === 'extreme') {
+            bouncesSlider.value = 6;
+            shadowSlider.value = 48;
+            stepsSlider.value = 180;
+            resolutionSlider.value = 120;
+        } else {
+            bouncesSlider.value = 3;
+            shadowSlider.value = 24;
+            stepsSlider.value = 120;
+            resolutionSlider.value = 100;
+        }
 
-    bouncesValueSpan.textContent = settings.bounces;
-    shadowValueSpan.textContent = settings.shadowQuality;
-    stepsValueSpan.textContent = settings.maxSteps;
-    resolutionValueSpan.textContent = parseInt(resolutionSlider.value) + "%";
-
-    setupCanvas();
-
-    // 重新初始化后端以应用新设置
-    if (currentBackend) {
-        switchBackend(backendSelector.value);
-    }
-}
-
-function onShaderChange() {
-    settings.scene = shaderSelector.value;
-    if (currentBackend) {
-        switchBackend(backendSelector.value);
-    }
-}
-
-function onShaderPreset(e) {
-    shaderPresets.forEach(btn => btn.classList.remove('active'));
-    e.target.classList.add('active');
-
-    if (e.target.dataset.preset === 'extreme') {
-        bouncesSlider.value = 6;
-        shadowSlider.value = 48;
-        stepsSlider.value = 180;
-        resolutionSlider.value = 120;
-    } else {
-        bouncesSlider.value = 3;
-        shadowSlider.value = 24;
-        stepsSlider.value = 120;
-        resolutionSlider.value = 100;
+        onSettingsChange();
     }
 
+    function onSceneSelect(e) {
+        const scene = e.currentTarget.dataset.scene;
+        settings.scene = scene;
+
+        previewItems.forEach(item => item.classList.remove('active'));
+        e.currentTarget.classList.add('active');
+
+        shaderSelector.value = scene;
+
+        if (currentBackend) {
+            switchBackend(backendSelector.value);
+        }
+    }
+
+    // 事件监听器
+    backendSelector.addEventListener('change', (e) => switchBackend(e.target.value));
+    shaderSelector.addEventListener('change', onShaderChange);
+    bouncesSlider.addEventListener('input', onSettingsChange);
+    shadowSlider.addEventListener('input', onSettingsChange);
+    stepsSlider.addEventListener('input', onSettingsChange);
+    resolutionSlider.addEventListener('input', onSettingsChange);
+
+    shaderPresets.forEach(btn => { btn.addEventListener('click', onShaderPreset); });
+
+    previewItems.forEach(item => { item.addEventListener('click', onSceneSelect); });
+
+    // 初始设置
     onSettingsChange();
-}
+    switchBackend(backendSelector.value);
 
-function onSceneSelect(e) {
-    const scene = e.currentTarget.dataset.scene;
-    settings.scene = scene;
-
-    previewItems.forEach(item => item.classList.remove('active'));
-    e.currentTarget.classList.add('active');
-
-    shaderSelector.value = scene;
-
-    if (currentBackend) {
-        switchBackend(backendSelector.value);
+    // 初始GPU信息
+    if (navigator.gpu) {
+        navigator.gpu.requestAdapter().then(adapter => {
+            if (adapter) {
+                // adapter.requestAdapterInfo().then(info => {
+                gpuModelSpan.textContent = /*info.description ||*/ 'GPU';
+                //});
+            }
+        });
     }
-}
-
-// 事件监听器
-backendSelector.addEventListener('change', (e) => switchBackend(e.target.value));
-shaderSelector.addEventListener('change', onShaderChange);
-bouncesSlider.addEventListener('input', onSettingsChange);
-shadowSlider.addEventListener('input', onSettingsChange);
-stepsSlider.addEventListener('input', onSettingsChange);
-resolutionSlider.addEventListener('input', onSettingsChange);
-
-shaderPresets.forEach(btn => { btn.addEventListener('click', onShaderPreset); });
-
-previewItems.forEach(item => { item.addEventListener('click', onSceneSelect); });
-
-// 初始设置
-onSettingsChange();
-switchBackend(backendSelector.value);
-
-// 初始GPU信息
-if (navigator.gpu) {
-    navigator.gpu.requestAdapter().then(adapter => {
-        if (adapter) {
-            // adapter.requestAdapterInfo().then(info => {
-            gpuModelSpan.textContent = /*info.description ||*/ '未知GPU';
-            //});
-        }
-    });
-}
