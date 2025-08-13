@@ -950,25 +950,32 @@
                 }
                 // 水晶宫殿场景
                 fn map(p: vec3f) -> vec4f {
-                    let p_rep = opRep(p, vec3f(4.0, 4.0, 4.0));
-                    // 主水晶结构
-                    let mainCrystal = vec4f(sdSphere(p_rep - vec3f(0.0, 0.0, 0.0), 0.8, 1.0, 0.95, 0.0);
-                    // 地面
-                    let ground = vec4f(sdPlane(p), 2.0, 0.5, 0.0);
-                    // 辅助水晶结构
-                    let crystal1 = vec4f(sdSphere(p_rep - vec3f(1.5, 0.5, 1.5), 0.5, 1.0, 0.92, 0.0);
-                    let crystal2 = vec4f(sdSphere(p_rep - vec3f(-1.5, 0.7, -1.5), 0.6, 1.0, 0.9, 0.0);
-                    // 柱子
-                    let pillar1 = vec4f(sdCylinder(p - vec3f(2.0, 0.0, 2.0), 0.3, 2.0, 3.0, 0.8, 0.0);
-                    let pillar2 = vec4f(sdCylinder(p - vec3f(-2.0, 0.0, -2.0), 0.3, 2.0, 3.0, 0.8, 0.0);
-                    var res = ground;
-                    res = opUnion(res, mainCrystal);
-                    res = opUnion(res, crystal1);
-                    res = opUnion(res, crystal2);
-                    res = opUnion(res, pillar1);
-                    res = opUnion(res, pillar2);
-                    return res;
-                }
+    let p_rep = opRep(p, vec3f(4.0, 4.0, 4.0));
+
+    // 主水晶结构
+    let mainCrystal = vec4f(sdSphere(p_rep - vec3f(0.0, 0.0, 0.0), 0.8), 1.0, 0.95, 0.0);
+
+    // 地面
+    let ground = vec4f(sdPlane(p), 2.0, 0.5, 0.0);
+
+    // 辅助水晶结构
+    let crystal1 = vec4f(sdSphere(p_rep - vec3f(1.5, 0.5, 1.5), 0.5), 1.0, 0.92, 0.0);
+    let crystal2 = vec4f(sdSphere(p_rep - vec3f(-1.5, 0.7, -1.5), 0.6), 1.0, 0.9, 0.0);
+
+    // 柱子
+    let pillar1 = vec4f(sdCylinder(p - vec3f(2.0, 0.0, 2.0), 0.3, 2.0), 3.0, 0.8, 0.0);
+    let pillar2 = vec4f(sdCylinder(p - vec3f(-2.0, 0.0, -2.0), 0.3, 2.0), 3.0, 0.8, 0.0);
+
+    var res = ground;
+    res = opUnion(res, mainCrystal);
+    res = opUnion(res, crystal1);
+    res = opUnion(res, crystal2);
+    res = opUnion(res, pillar1);
+    res = opUnion(res, pillar2);
+
+    return res;
+}
+
                 fn get_normal(p: vec3f) -> vec3f {
                     let e = vec2f(0.001, 0.0);
                     let n = vec3f(
