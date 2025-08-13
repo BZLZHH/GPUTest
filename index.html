@@ -411,11 +411,12 @@
             width: 100%;
             height: 100%;
             background: rgba(0, 10, 20, 0.9);
-            display: flex;
+            display: none;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             z-index: 100;
+            opacity: 0;
             transition: opacity 0.5s;
         }
 
@@ -618,15 +619,15 @@
                     </div>
 
                     <div class="info-item">
-                        <strong><i class="fas fa-microchip"></i> GPU 型号</strong>
+                        <strong><i class="fas fa-microchip"></i> GPU 信息</strong>
                         <span id="gpu-info">--</span>
                     </div>
 
                     <div class="info-item">
                         <strong><i class="fas fa-heartbeat"></i> 性能状态</strong>
                         <div>
-                            <span class="status-indicator status-optimal"></span>
-                            <span id="render-status">正在渲染</span>
+                            <span class="status-indicator status-good"></span>
+                            <span id="render-status">已暂停</span>
                         </div>
                     </div>
                 </div>
@@ -639,6 +640,6 @@
         </footer>
     </div>
 
-    <script src="render_v9.js"></script>
+    <script src="render_v10.js"></script>
 </body>
 </html>

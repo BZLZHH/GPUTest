@@ -114,7 +114,7 @@ const webglBackend = {
         }
 
         const debugInfo = this.gl.getExtension('WEBGL_debug_renderer_info');
-        const gpuInfo = debugInfo ? this.gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : 'GPU';
+        const gpuInfo = debugInfo ? this.gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : 'WebGL';
         gpuInfoSpan.textContent = gpuInfo;
         gpuModelSpan.textContent = gpuInfo;
 
@@ -300,7 +300,7 @@ const webgpuBackend = {
                 console.error('No WebGPU adapter found!');
                 return false;
             }
-            const gpuInfo = 'GPU';
+            const gpuInfo = 'WebGPU';
             gpuInfoSpan.textContent = gpuInfo;
             gpuModelSpan.textContent = gpuInfo;
             this.device = await adapter.requestDevice();
@@ -987,7 +987,7 @@ if (navigator.gpu) {
     navigator.gpu.requestAdapter().then(adapter => {
         if (adapter) {
             // adapter.requestAdapterInfo().then(info => {
-            gpuModelSpan.textContent = /*info.description ||*/ 'GPU';
+            gpuModelSpan.textContent = /*info.description ||*/ 'W e bGPU';
             //});
         }
     });
