@@ -754,12 +754,12 @@ async function switchBackend(backendName) {
 
     if (animationFrameId) cancelAnimationFrame(animationFrameId);
     if (currentBackend?.cleanup) currentBackend.cleanup();
-
-    loadingScreen.style.display = 'flex';
-    loadingScreen.style.opacity = '1';
-    renderStatusSpan.textContent = "初始化中...";
-    statusIndicator.className = "status-indicator status-good";
-
+    if (!isPaused) {
+        loadingScreen.style.display = 'flex';
+        loadingScreen.style.opacity = '1';
+        renderStatusSpan.textContent = "初始化中...";
+        statusIndicator.className = "status-indicator status-good";
+    }
     setupCanvas();
 
     try {
@@ -779,7 +779,7 @@ async function switchBackend(backendName) {
                 startRenderLoop();
             }
 
-            if (currentBackend !== webgpuBackend) {
+            if (backendName === 'webgl') {
                 animate(lastFrameTime);
             }
 
@@ -803,6 +803,7 @@ async function switchBackend(backendName) {
 }
 
 function animate(now) {
+    if (isPaused) return;
     updateFPS(now);
 
     try {
