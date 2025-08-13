@@ -47,7 +47,7 @@ window.addEventListener('load', async () => {
     // 尽量在任何获取 canvas context 之前读取 cookie 并设定后端选择
     const backendName = getBackendCookie() || 'webgpu'; // 默认 webgpu
     backendSelector.value = backendName;
-
+    onSettingsChange();
     // 调用你现有的 switchBackend（注意：switchBackend 内不应该再重复设置 cookie 否则会循环）
     try {
         await switchBackend(backendName);
@@ -890,8 +890,8 @@ shaderPresets.forEach(btn => { btn.addEventListener('click', onShaderPreset); })
 previewItems.forEach(item => { item.addEventListener('click', onSceneSelect); });
 
 // 初始设置
-onSettingsChange();
-switchBackend(backendSelector.value);
+// onSettingsChange();
+// switchBackend(backendSelector.value);
 
 // 初始GPU信息
 if (navigator.gpu) {
