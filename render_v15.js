@@ -624,45 +624,39 @@ const wgslScenes = {
             // 洞穴基础结构
             let cave = vec4f(sdSphere(p, 12.0), 1.0, 0.5, 0.0);
             
-            // 石笋阵列
-            let stalagmites = opUnion(
-                sdCone(p - vec3f(2.0, -9.0, 1.0), vec2f(0.8, 2.5)),
-                opUnion(
-                    sdCone(p - vec3f(-3.0, -10.0, -2.0), vec2f(1.2, 3.0)),
-                    sdCone(p - vec3f(4.0, -8.5, -3.0), vec2f(0.7, 2.0))
-                )
-            );
+            // 石笋阵列 (直接包装成vec4f)
+            let stalagmite1 = vec4f(sdCone(p - vec3f(2.0, -9.0, 1.0), vec2f(0.8, 2.5)), 2.0, 0.8, 0.0);
+            let stalagmite2 = vec4f(sdCone(p - vec3f(-3.0, -10.0, -2.0), vec2f(1.2, 3.0)), 2.0, 0.8, 0.0);
+            let stalagmite3 = vec4f(sdCone(p - vec3f(4.0, -8.5, -3.0), vec2f(0.7, 2.0)), 2.0, 0.8, 0.0);
             
-            // 钟乳石阵列
-            let stalactites = opUnion(
-                sdCone(vec3f(p.x, -p.y+11.0, p.z), vec2f(1.0, 2.8)),
-                opUnion(
-                    sdCone(vec3f(p.x+3.0, -p.y+9.5, p.z-2.0), vec2f(0.6, 1.8)),
-                    sdCone(vec3f(p.x-4.0, -p.y+10.0, p.z+3.0), vec2f(0.9, 2.2))
-                )
-            );
+            // 钟乳石阵列 (直接包装成vec4f)
+            let stalactite1 = vec4f(sdCone(vec3f(p.x, -p.y+11.0, p.z), vec2f(1.0, 2.8)), 3.0, 0.8, 0.0);
+            let stalactite2 = vec4f(sdCone(vec3f(p.x+3.0, -p.y+9.5, p.z-2.0), vec2f(0.6, 1.8)), 3.0, 0.8, 0.0);
+            let stalactite3 = vec4f(sdCone(vec3f(p.x-4.0, -p.y+10.0, p.z+3.0), vec2f(0.9, 2.2)), 3.0, 0.8, 0.0);
             
-            // 水晶簇
-            let crystalCluster = opUnion(
-                sdOctahedron(p - vec3f(5.0, -7.0, 0.0), 1.2),
-                opUnion(
-                    sdOctahedron(p - vec3f(5.8, -6.5, 1.5), 0.8),
-                    sdOctahedron(p - vec3f(4.5, -6.0, -1.0), 0.6)
-                )
-            );
+            // 水晶簇 (直接包装成vec4f)
+            let crystal1 = vec4f(sdOctahedron(p - vec3f(5.0, -7.0, 0.0), 1.2), 4.0, 0.95, 0.8);
+            let crystal2 = vec4f(sdOctahedron(p - vec3f(5.8, -6.5, 1.5), 0.8), 4.0, 0.95, 0.8);
+            let crystal3 = vec4f(sdOctahedron(p - vec3f(4.5, -6.0, -1.0), 0.6), 4.0, 0.95, 0.8);
             
             // 地面细节
-            let rockDetail = sdBox(p - vec3f(0.0, -10.5, 0.0), vec3f(15.0, 0.3, 15.0));
+            let groundDetail = vec4f(sdBox(p - vec3f(0.0, -10.5, 0.0), vec3f(15.0, 0.3, 15.0)), 5.0, 0.6, 0.0);
             
             // 发光水晶柱
-            let glowColumn = sdCylinder(p - vec3f(0.0, -5.0, 0.0), 0.8, 4.0);
+            let glowColumn = vec4f(sdCylinder(p - vec3f(0.0, -5.0, 0.0), 0.8, 4.0), 6.0, 0.9, 1.5);
             
-            var res = vec4f(cave.x, 1.0, 0.5, 0.0);
-            res = opUnion(res, vec4f(stalagmites, 2.0, 0.8, 0.0));
-            res = opUnion(res, vec4f(stalactites, 3.0, 0.8, 0.0));
-            res = opUnion(res, vec4f(crystalCluster, 4.0, 0.95, 0.8));
-            res = opUnion(res, vec4f(rockDetail, 5.0, 0.6, 0.0));
-            res = opUnion(res, vec4f(glowColumn, 6.0, 0.9, 1.5));
+            var res = cave;
+            res = opUnion(res, stalagmite1);
+            res = opUnion(res, stalagmite2);
+            res = opUnion(res, stalagmite3);
+            res = opUnion(res, stalactite1);
+            res = opUnion(res, stalactite2);
+            res = opUnion(res, stalactite3);
+            res = opUnion(res, crystal1);
+            res = opUnion(res, crystal2);
+            res = opUnion(res, crystal3);
+            res = opUnion(res, groundDetail);
+            res = opUnion(res, glowColumn);
             
             return res;
         }
@@ -707,50 +701,38 @@ const wgslScenes = {
         );
     `
     },
-
     space : {
         map : `
         fn map(p: vec3f) -> vec4f {
             // 主环形结构
-            let ring = vec4f(
-                sdTorus(p, vec2f(4.0, 0.7)),
-                1.0, 0.85, 0.0);
+            let ring = vec4f(sdTorus(p, vec2f(4.0, 0.7)), 1.0, 0.85, 0.0);
             
             // 中心球体
-            let core = vec4f(
-                sdSphere(p, 1.8),
-                2.0, 0.9, 0.0);
+            let core = vec4f(sdSphere(p, 1.8), 2.0, 0.9, 0.0);
             
-            // 太阳能板阵列
-            let solarPanels = opUnion(
-                sdBox(p - vec3f(0.0, 0.0, -6.0), vec3f(5.0, 0.1, 1.0)),
-                sdBox(p - vec3f(0.0, 0.0, 6.0), vec3f(5.0, 0.1, 1.0))
-            );
+            // 太阳能板阵列 (直接包装成vec4f)
+            let solarPanel1 = vec4f(sdBox(p - vec3f(0.0, 0.0, -6.0), vec3f(5.0, 0.1, 1.0)), 4.0, 0.9, 0.0);
+            let solarPanel2 = vec4f(sdBox(p - vec3f(0.0, 0.0, 6.0), vec3f(5.0, 0.1, 1.0)), 4.0, 0.9, 0.0);
             
             // 居住舱
-            let habitat = vec4f(
-                sdCapsule(p - vec3f(5.0, 0.0, 0.0), 2.0, 1.0),
-                3.0, 0.7, 0.0);
+            let habitat = vec4f(sdCapsule(p - vec3f(5.0, 0.0, 0.0), 2.0, 1.0), 3.0, 0.7, 0.0);
             
-            // 推进器组
-            let thrusters = opUnion(
-                sdCone(p - vec3f(-5.0, 0.0, 0.0), vec2f(0.8, 1.8)),
-                opUnion(
-                    sdCone(p - vec3f(-5.0, 1.5, 1.5), vec2f(0.4, 1.2)),
-                    sdCone(p - vec3f(-5.0, -1.5, 1.5), vec2f(0.4, 1.2))
-                )
-            );
+            // 推进器组 (直接包装成vec4f)
+            let thruster1 = vec4f(sdCone(p - vec3f(-5.0, 0.0, 0.0), vec2f(0.8, 1.8)), 6.0, 0.95, 1.2);
+            let thruster2 = vec4f(sdCone(p - vec3f(-5.0, 1.5, 1.5), vec2f(0.4, 1.2)), 6.0, 0.95, 1.2);
+            let thruster3 = vec4f(sdCone(p - vec3f(-5.0, -1.5, 1.5), vec2f(0.4, 1.2)), 6.0, 0.95, 1.2);
             
             // 卫星
-            let satellite = vec4f(
-                sdBox(p - vec3f(3.0, 3.0, 3.0), vec3f(0.5, 0.5, 1.5)),
-                5.0, 0.8, 0.0);
+            let satellite = vec4f(sdBox(p - vec3f(3.0, 3.0, 3.0), vec3f(0.5, 0.5, 1.5)), 5.0, 0.8, 0.0);
             
             var res = ring;
             res = opUnion(res, core);
-            res = opUnion(res, vec4f(solarPanels, 4.0, 0.9, 0.0));
+            res = opUnion(res, solarPanel1);
+            res = opUnion(res, solarPanel2);
             res = opUnion(res, habitat);
-            res = opUnion(res, vec4f(thrusters, 6.0, 0.95, 1.2));
+            res = opUnion(res, thruster1);
+            res = opUnion(res, thruster2);
+            res = opUnion(res, thruster3);
             res = opUnion(res, satellite);
             
             return res;
@@ -793,34 +775,31 @@ const wgslScenes = {
         );
     `
     },
-
     future : {
         map : `
+        fn sdSkyscraper(p: vec3f, pos: vec3f, width: f32, height: f32) -> vec4f {
+            return vec4f(sdBox(p - pos, vec3f(width, height, width)), 2.0, 0.85, 0.0);
+        }
+        
+        fn sdWindow(p: vec3f, pos: vec3f) -> vec4f {
+            return vec4f(sdBox(p - pos, vec3f(0.1, 0.5, 0.01)), 6.0, 0.6, 1.0);
+        }
+        
         fn map(p: vec3f) -> vec4f {
             // 地面网格
             let ground = vec4f(sdPlane(p), 1.0, 0.5, 0.0);
             
-            // 摩天楼群
-            let towers = opUnion(
-                sdSkyscraper(p, vec3f(2.0, 0.0, 1.0), 0.8, 8.0),
-                opUnion(
-                    sdSkyscraper(p, vec3f(-1.0, 0.0, -2.0), 1.2, 12.0),
-                    opUnion(
-                        sdSkyscraper(p, vec3f(4.0, 0.0, -3.0), 0.7, 6.0),
-                        sdSkyscraper(p, vec3f(-3.0, 0.0, 3.0), 1.0, 10.0)
-                    )
-                )
-            );
+            // 摩天楼群 (使用自定义函数返回vec4f)
+            let tower1 = sdSkyscraper(p, vec3f(2.0, 0.0, 1.0), 0.8, 8.0);
+            let tower2 = sdSkyscraper(p, vec3f(-1.0, 0.0, -2.0), 1.2, 12.0);
+            let tower3 = sdSkyscraper(p, vec3f(4.0, 0.0, -3.0), 0.7, 6.0);
+            let tower4 = sdSkyscraper(p, vec3f(-3.0, 0.0, 3.0), 1.0, 10.0);
             
             // 悬浮平台
-            let platform = vec4f(
-                sdBox(p - vec3f(0.0, 9.0, 0.0), vec3f(8.0, 0.5, 8.0)),
-                3.0, 0.8, 0.0);
+            let platform = vec4f(sdBox(p - vec3f(0.0, 9.0, 0.0), vec3f(8.0, 0.5, 8.0)), 3.0, 0.8, 0.0);
             
             // 连接桥
-            let bridge = vec4f(
-                sdCapsule(p - vec3f(0.0, 10.0, 0.0), 6.0, 0.3),
-                4.0, 0.7, 0.0);
+            let bridge = vec4f(sdCapsule(p - vec3f(0.0, 10.0, 0.0), 6.0, 0.3), 4.0, 0.7, 0.0);
             
             // 动态飞行器
             let aircraft = vec4f(
@@ -832,27 +811,21 @@ const wgslScenes = {
                 5.0, 0.9, 0.0);
             
             // 建筑细节 (窗户)
-            let windows = opUnion(
-                sdWindow(p, vec3f(2.0, 3.0, 1.0)),
-                sdWindow(p, vec3f(2.0, 6.0, 1.0))
-            );
+            let window1 = sdWindow(p, vec3f(2.0, 3.0, 1.0));
+            let window2 = sdWindow(p, vec3f(2.0, 6.0, 1.0));
             
             var res = ground;
-            res = opUnion(res, vec4f(towers, 2.0, 0.85, 0.0));
+            res = opUnion(res, tower1);
+            res = opUnion(res, tower2);
+            res = opUnion(res, tower3);
+            res = opUnion(res, tower4);
             res = opUnion(res, platform);
             res = opUnion(res, bridge);
             res = opUnion(res, aircraft);
-            res = opUnion(res, vec4f(windows, 6.0, 0.6, 1.0));
+            res = opUnion(res, window1);
+            res = opUnion(res, window2);
             
             return res;
-        }
-        
-        fn sdSkyscraper(p: vec3f, pos: vec3f, width: f32, height: f32) -> f32 {
-            return sdBox(p - pos, vec3f(width, height, width));
-        }
-        
-        fn sdWindow(p: vec3f, pos: vec3f) -> f32 {
-            return sdBox(p - pos, vec3f(0.1, 0.5, 0.01));
         }
     `,
         getColor : `
