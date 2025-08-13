@@ -468,7 +468,7 @@ const webgpuBackend = {
                 
                 @fragment
                 fn fs_main(@builtin(position) frag_coord: vec4f) -> @location(0) vec4f {
-                    let uv = (frag_coord.xy - 0.5 * u.resolution.xy) / u.resolution.y;
+                    let uv = (vec2f(frag_coord.x, u.resolution.y - frag_coord.y) - 0.5 * u.resolution.xy) / u.resolution.y;
                     
                     // 相机动画
                     ${sceneWGSL.cameraPath}
@@ -630,27 +630,47 @@ const wgslScenes = {
     },
     cave : {
         map : `
+        // 修正的SDF函数
+        fn sdCone(p: vec3f, c: vec2f) -> f32 {
+            // 标准圆锥SDF实现
+            let q = vec2f(length(p.xz), p.y);
+            let d = dot(c, vec2f(q.x, abs(q.y)));
+            return max(d, abs(q.y) - c.y);
+        }
+
+        fn sdOctahedron(p: vec3f, s: f32) -> f32 {
+            // 标准八面体SDF
+            p = abs(p);
+            return (p.x + p.y + p.z - s) * 0.57735027;
+        }
+
+        fn sdCylinder(p: vec3f, r: f32, h: f32) -> f32 {
+            // 修正圆柱SDF
+            let d = abs(vec2f(length(p.xz), p.y)) - vec2f(r, h);
+            return min(max(d.x, d.y), 0.0) + length(max(d, vec2f(0.0)));
+        }
+
         fn map(p: vec3f) -> vec4f {
-            // 地面
-            let ground = vec4f(sdPlane(p), 1.0, 0.5, 0.0);
+            // 地面 - 确保在y=0平面
+            let ground = vec4f(p.y + 3.0, 1.0, 0.5, 0.0); // 提高地面到y=-3
             
-            // 石笋阵列 - 使用传入的p参数
-            let stalagmite1 = vec4f(sdCone(p - vec3f(2.0, 0.0, 1.0), vec2f(0.5, 2.0)), 2.0, 0.8, 0.0);
-            let stalagmite2 = vec4f(sdCone(p - vec3f(-3.0, 0.0, -2.0), vec2f(0.7, 2.5)), 2.0, 0.8, 0.0);
-            let stalagmite3 = vec4f(sdCone(p - vec3f(4.0, 0.0, -3.0), vec2f(0.4, 1.8)), 2.0, 0.8, 0.0);
+            // 石笋阵列 - 位置调整到地面附近
+            let stalagmite1 = vec4f(sdCone(p - vec3f(1.5, -2.8, 0.0), vec2f(0.5, 1.8)), 2.0, 0.8, 0.0);
+            let stalagmite2 = vec4f(sdCone(p - vec3f(-2.0, -2.9, -1.5), vec2f(0.6, 2.0)), 2.0, 0.8, 0.0);
+            let stalagmite3 = vec4f(sdCone(p - vec3f(0.0, -3.0, 2.0), vec2f(0.4, 1.5)), 2.0, 0.8, 0.0);
             
-            // 钟乳石阵列 - 使用传入的p参数
-            let stalactite1 = vec4f(sdCone(p - vec3f(0.0, 5.0, 0.0), vec2f(0.6, 2.0)), 3.0, 0.8, 0.0);
-            let stalactite2 = vec4f(sdCone(p - vec3f(3.0, 4.5, -2.0), vec2f(0.5, 1.5)), 3.0, 0.8, 0.0);
-            let stalactite3 = vec4f(sdCone(p - vec3f(-4.0, 4.8, 3.0), vec2f(0.7, 1.8)), 3.0, 0.8, 0.0);
+            // 钟乳石阵列 - 位置调整到洞顶
+            let stalactite1 = vec4f(sdCone(vec3f(p.x, -p.y - 5.0, p.z), vec2f(0.7, 1.5)), 3.0, 0.8, 0.0);
+            let stalactite2 = vec4f(sdCone(vec3f(p.x+2.5, -p.y - 5.5, p.z-1.0), vec2f(0.5, 1.2)), 3.0, 0.8, 0.0);
+            let stalactite3 = vec4f(sdCone(vec3f(p.x-1.5, -p.y - 4.8, p.z+1.5), vec2f(0.6, 1.8)), 3.0, 0.8, 0.0);
             
-            // 水晶簇 - 使用传入的p参数
-            let crystal1 = vec4f(sdOctahedron(p - vec3f(3.0, 0.5, 0.0), 0.8), 4.0, 0.95, 0.8);
-            let crystal2 = vec4f(sdOctahedron(p - vec3f(3.8, 1.0, 1.5), 0.5), 4.0, 0.95, 0.8);
-            let crystal3 = vec4f(sdOctahedron(p - vec3f(2.5, 0.3, -1.0), 0.4), 4.0, 0.95, 0.8);
+            // 水晶簇 - 位置调整到可见区域
+            let crystal1 = vec4f(sdOctahedron(p - vec3f(1.0, -1.0, 0.0), 0.6), 4.0, 0.95, 0.8);
+            let crystal2 = vec4f(sdOctahedron(p - vec3f(-1.5, -0.8, 1.2), 0.4), 4.0, 0.95, 0.8);
+            let crystal3 = vec4f(sdOctahedron(p - vec3f(0.5, -0.5, -1.5), 0.5), 4.0, 0.95, 0.8);
             
-            // 发光水晶柱 - 使用传入的p参数
-            let glowColumn = vec4f(sdCylinder(p - vec3f(0.0, 0.5, 0.0), 0.5, 2.0), 5.0, 0.9, 1.5);
+            // 发光水晶柱 - 中心位置
+            let glowColumn = vec4f(sdCylinder(p - vec3f(0.0, -1.0, 0.0), 0.3, 1.0), 5.0, 0.9, 1.5);
             
             var res = ground;
             res = opUnion(res, stalagmite1);
@@ -698,9 +718,9 @@ const wgslScenes = {
         cameraPath : `
         let time = u.time * 0.1;
         var ro = vec3f(
-            5.0 * cos(time),
-            2.5 + sin(time * 0.5),
-            5.0 * sin(time)
+            3.0 * cos(time),
+            0.0,  // 降低相机高度
+            3.0 * sin(time)
         );
     `
     },
