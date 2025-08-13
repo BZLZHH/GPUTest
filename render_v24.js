@@ -628,80 +628,73 @@ const wgslScenes = {
             var ro = vec3f(5.0 * cos(time), 3.0, 5.0 * sin(time));
         `
     },
-    cave : {
+    dreamForest : {
         map : `
-        fn local_sdSphere(p: vec3f, s: f32) -> f32 { return length(p) - s; }
-        fn local_sdPlane(p: vec3f) -> f32 { return p.y; }
-        fn local_sdCylinder(p: vec3f, r: f32, h: f32) -> f32 {
-            let d = abs(vec2f(length(p.xz), p.y)) - vec2f(r, h);
-            return min(max(d.x, d.y), 0.0) + length(max(d, vec2f(0.0)));
-        }
-        fn local_sdCone(p: vec3f, c: vec2f) -> f32 {
-            let q = length(p.xz);
-            return dot(c, vec2f(q, p.y));
-        }
-        fn local_sdBox(p: vec3f, b: vec3f) -> f32 {
-            let q = abs(p) - b;
-            return length(max(q, vec3f(0.0))) + min(max(q.x, max(q.y, q.z)), 0.0);
-        }
-        fn local_opRep(p: vec3f, c: vec3f) -> vec3f { return p % c - 0.5 * c; }
-        fn local_opUnion(a: vec4f, b: vec4f) -> vec4f { if (a.x < b.x) { return a; } return b; }
-        
         fn map(p: vec3f) -> vec4f {
-            // 洞穴基础结构
-            let cave = vec4f(local_sdSphere(p, 12.0), 1.0, 0.5, 0.0);
-        
-            // 石笋阵列
-            let stalagmite1 = vec4f(local_sdCone(p - vec3f(2.0, 0.0, 2.0), vec2f(0.5, 3.0)), 3.0, 0.7, 0.0);
-            let stalagmite2 = vec4f(local_sdCone(p - vec3f(-2.0, 0.0, -2.0), vec2f(0.3, 2.0)), 3.0, 0.65, 0.0);
-            let stalagmite3 = vec4f(local_sdCone(p - vec3f(1.0, 0.0, -3.0), vec2f(0.4, 2.5)), 3.0, 0.7, 0.0);
-        
+            let p_rep = opRep(p, vec3f(6.0, 6.0, 6.0));
+
+            // 树干
+            let trunk = vec4f(sdCylinder(p_rep - vec3f(0.0, 0.0, 0.0), 0.3, 2.5), 3.0, 0.6, 0.0);
+            // 树叶
+            let leaves = vec4f(sdSphere(p_rep - vec3f(0.0, 2.0, 0.0), 1.0), 1.0, 0.9, 0.0);
+            // 石头
+            let stone1 = vec4f(sdSphere(p_rep - vec3f(2.0, 0.2, -1.5), 0.5), 2.0, 0.7, 0.0);
+            let stone2 = vec4f(sdSphere(p_rep - vec3f(-1.5, 0.3, 2.0), 0.6), 2.0, 0.7, 0.0);
             // 地面
-            let ground = vec4f(local_sdPlane(p), 2.0, 0.6, 0.0);
-        
-            // 石柱/岩石
-            let pillar1 = vec4f(local_sdCylinder(p - vec3f(3.0, 0.0, -1.0), 0.4, 4.0), 4.0, 0.8, 0.0);
-            let pillar2 = vec4f(local_sdCylinder(p - vec3f(-3.0, 0.0, 1.0), 0.5, 3.5), 4.0, 0.75, 0.0);
-        
-            // 合并所有元素
-            var res = cave;
-            res = local_opUnion(res, stalagmite1);
-            res = local_opUnion(res, stalagmite2);
-            res = local_opUnion(res, stalagmite3);
-            res = local_opUnion(res, ground);
-            res = local_opUnion(res, pillar1);
-            res = local_opUnion(res, pillar2);
-        
+            let ground = vec4f(sdPlane(p), 4.0, 0.5, 0.0);
+
+            // 河流 SDF (沿 Z 方向)
+            let river = vec4f(sdBox(p - vec3f(0.0, 0.0, 0.0), vec3f(6.0, 0.05, 1.0)), 5.0, 0.3, 1.0);
+
+            // 漂浮光点 (动态小球)
+            let t = u.time * 0.2;
+            let light1 = vec4f(sdSphere(p - vec3f(sin(t) * 2.0, 1.5 + sin(t*1.5)*0.3, cos(t)*2.0), 0.1), 6.0, 1.0, 1.0);
+            let light2 = vec4f(sdSphere(p - vec3f(cos(t*0.8)*2.5, 1.8 + cos(t*1.2)*0.3, sin(t*0.9)*2.0), 0.1), 6.0, 1.0, 1.0);
+
+            var res = ground;
+            res = opUnion(res, trunk);
+            res = opUnion(res, leaves);
+            res = opUnion(res, stone1);
+            res = opUnion(res, stone2);
+            res = opUnion(res, river);
+            res = opUnion(res, light1);
+            res = opUnion(res, light2);
+
             return res;
         }
-        `,
+    `,
         getColor : `
         fn get_color(mat_id: f32) -> vec3f {
-            if (mat_id < 1.5) { return vec3f(0.1, 0.1, 0.15); } // 洞穴墙壁
-            if (mat_id < 2.5) { return vec3f(0.3, 0.25, 0.2); } // 地面
-            if (mat_id < 3.5) { return vec3f(0.6, 0.5, 0.4); } // 石笋
-            return vec3f(0.4, 0.35, 0.3); // 石柱
+            if (mat_id < 1.5) {
+                return vec3f(0.5, 0.9, 0.6); // 树叶
+            }
+            if (mat_id < 3.0) {
+                return vec3f(0.4, 0.3, 0.25); // 树干 / 石头
+            }
+            if (mat_id < 5.0) {
+                return vec3f(0.2, 0.5, 0.7); // 河流
+            }
+            return vec3f(1.0, 1.0, 0.8); // 漂浮光点
         }
-        `,
+    `,
         getEmission : `
         fn get_emission(mat_id: f32, glow: f32) -> vec3f {
             if (glow > 0.0) {
-                if (mat_id < 3.5) {
-                    return vec3f(0.0, 0.3, 0.6) * 2.0; // 石笋荧光
+                if (mat_id < 1.5) {
+                    return vec3f(0.8, 1.0, 0.5) * 2.0; // 树叶微光
                 }
-                return vec3f(0.1, 0.05, 0.0) * 1.5; // 石柱微光
+                if (mat_id < 5.0) {
+                    return vec3f(0.3, 0.5, 1.0) * 1.5; // 河流微光反射
+                }
+                return vec3f(1.0, 0.8, 0.5) * 3.0;     // 漂浮光点
             }
             return vec3f(0.0);
         }
-        `,
+    `,
         cameraPath : `
-        let time = u.time * 0.12;
-        var ro = vec3f(
-            8.0 * cos(time),
-            2.5 + 1.5 * sin(time * 0.5),
-            8.0 * sin(time)
-        );
-        `
+        let time = u.time * 0.05;
+        var ro = vec3f(8.0 * cos(time), 3.5, 8.0 * sin(time));
+    `
     },
 
     space : {
