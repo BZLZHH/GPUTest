@@ -50,7 +50,9 @@ window.addEventListener('load', async () => {
     onSettingsChange();
     // 调用你现有的 switchBackend（注意：switchBackend 内不应该再重复设置 cookie 否则会循环）
     try {
-        await switchBackend(backendName);
+        if (!isPaused) {
+            await switchBackend(backendName);
+        }
     }
     catch (err) {
         console.error('初始化后端失败：', err);
@@ -768,7 +770,7 @@ async function switchBackend(backendName) {
             lastFrameTime = performance.now();
             frameCount = 0;
             startTime = lastFrameTime;
-            renderStatusSpan.textContent = "渲染中...";
+            renderStatusSpan.textContent = "正在渲染...";
             statusIndicator.className = "status-indicator status-optimal";
 
             // 只在未暂停时启动渲染循环
@@ -776,7 +778,10 @@ async function switchBackend(backendName) {
                 // 启动循环（使用我们封装的 startRenderLoop）
                 startRenderLoop();
             }
-            animate(lastFrameTime);
+
+            if (currentBackend !== webgpuBackend) {
+                animate(lastFrameTime);
+            }
 
             // 隐藏加载界面
             setTimeout(() => {
@@ -945,7 +950,7 @@ if (pauseBtn) {
             statusIndicator.className = "status-indicator status-good";
         } else {
             // 恢复：启动循环（如果后端尚未初始化，先初始化）
-            renderStatusSpan.textContent = "渲染中...";
+            renderStatusSpan.textContent = "正在渲染...";
             statusIndicator.className = "status-indicator status-optimal";
 
             // 如果后端还没 init（比如页面刚 load 但未成功 init），先 init，再启动
