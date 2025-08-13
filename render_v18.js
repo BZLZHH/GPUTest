@@ -463,7 +463,7 @@ const webgpuBackend = {
                         vec2f(-1.0, -1.0), vec2f(1.0, -1.0),
                         vec2f(-1.0, 1.0), vec2f(1.0, 1.0)
                     );
-                    return vec4f(pos[in_vertex_index], 0.0, 1.0);
+                    return vec4f(pos[in_vertex_index].x, -pos[in_vertex_index].y, 0.0, 1.0);
                 }
                 
                 @fragment
@@ -632,25 +632,25 @@ const wgslScenes = {
         map : `
         fn map(p: vec3f) -> vec4f {
             // 地面
-            let ground = vec4f(sdPlane(p - vec3f(0.0, -3.0, 0.0)), 1.0, 0.5, 0.0);
+            let ground = vec4f(sdPlane(p), 1.0, 0.5, 0.0);
             
-            // 石笋阵列
+            // 石笋阵列 - 使用传入的p参数
             let stalagmite1 = vec4f(sdCone(p - vec3f(2.0, 0.0, 1.0), vec2f(0.5, 2.0)), 2.0, 0.8, 0.0);
             let stalagmite2 = vec4f(sdCone(p - vec3f(-3.0, 0.0, -2.0), vec2f(0.7, 2.5)), 2.0, 0.8, 0.0);
             let stalagmite3 = vec4f(sdCone(p - vec3f(4.0, 0.0, -3.0), vec2f(0.4, 1.8)), 2.0, 0.8, 0.0);
             
-            // 钟乳石阵列
-            let stalactite1 = vec4f(sdCone(vec3f(p.x, -p.y + 8.0, p.z) - vec3f(0.0, 4.0, 0.0), vec2f(0.6, 2.0)), 3.0, 0.8, 0.0);
-            let stalactite2 = vec4f(sdCone(vec3f(p.x+3.0, -p.y + 7.0, p.z-2.0), vec2f(0.5, 1.5)), 3.0, 0.8, 0.0);
-            let stalactite3 = vec4f(sdCone(vec3f(p.x-4.0, -p.y + 7.5, p.z+3.0), vec2f(0.7, 1.8)), 3.0, 0.8, 0.0);
+            // 钟乳石阵列 - 使用传入的p参数
+            let stalactite1 = vec4f(sdCone(p - vec3f(0.0, 5.0, 0.0), vec2f(0.6, 2.0)), 3.0, 0.8, 0.0);
+            let stalactite2 = vec4f(sdCone(p - vec3f(3.0, 4.5, -2.0), vec2f(0.5, 1.5)), 3.0, 0.8, 0.0);
+            let stalactite3 = vec4f(sdCone(p - vec3f(-4.0, 4.8, 3.0), vec2f(0.7, 1.8)), 3.0, 0.8, 0.0);
             
-            // 水晶簇
-            let crystal1 = vec4f(sdOctahedron(p - vec3f(3.0, 1.0, 0.0), 0.8), 4.0, 0.95, 0.8);
-            let crystal2 = vec4f(sdOctahedron(p - vec3f(3.8, 1.5, 1.5), 0.5), 4.0, 0.95, 0.8);
-            let crystal3 = vec4f(sdOctahedron(p - vec3f(2.5, 0.8, -1.0), 0.4), 4.0, 0.95, 0.8);
+            // 水晶簇 - 使用传入的p参数
+            let crystal1 = vec4f(sdOctahedron(p - vec3f(3.0, 0.5, 0.0), 0.8), 4.0, 0.95, 0.8);
+            let crystal2 = vec4f(sdOctahedron(p - vec3f(3.8, 1.0, 1.5), 0.5), 4.0, 0.95, 0.8);
+            let crystal3 = vec4f(sdOctahedron(p - vec3f(2.5, 0.3, -1.0), 0.4), 4.0, 0.95, 0.8);
             
-            // 发光水晶柱
-            let glowColumn = vec4f(sdCylinder(p - vec3f(0.0, 1.0, 0.0), 0.5, 2.0), 5.0, 0.9, 1.5);
+            // 发光水晶柱 - 使用传入的p参数
+            let glowColumn = vec4f(sdCylinder(p - vec3f(0.0, 0.5, 0.0), 0.5, 2.0), 5.0, 0.9, 1.5);
             
             var res = ground;
             res = opUnion(res, stalagmite1);
@@ -698,34 +698,34 @@ const wgslScenes = {
         cameraPath : `
         let time = u.time * 0.1;
         var ro = vec3f(
-            5.0 * cos(time * 0.7),
-            3.0 + sin(time * 0.5),
-            5.0 * sin(time * 0.7)
+            5.0 * cos(time),
+            2.5 + sin(time * 0.5),
+            5.0 * sin(time)
         );
     `
     },
     space : {
         map : `
         fn map(p: vec3f) -> vec4f {
-            // 主环形结构
+            // 主环形结构 - 使用传入的p参数
             let ring = vec4f(sdTorus(p, vec2f(4.0, 0.7)), 1.0, 0.85, 0.0);
             
-            // 中心球体
+            // 中心球体 - 使用传入的p参数
             let core = vec4f(sdSphere(p, 1.8), 2.0, 0.9, 0.0);
             
-            // 太阳能板阵列 (直接包装成vec4f)
+            // 太阳能板阵列 - 使用传入的p参数
             let solarPanel1 = vec4f(sdBox(p - vec3f(0.0, 0.0, -6.0), vec3f(5.0, 0.1, 1.0)), 4.0, 0.9, 0.0);
             let solarPanel2 = vec4f(sdBox(p - vec3f(0.0, 0.0, 6.0), vec3f(5.0, 0.1, 1.0)), 4.0, 0.9, 0.0);
             
-            // 居住舱
+            // 居住舱 - 使用传入的p参数
             let habitat = vec4f(sdCapsule(p - vec3f(5.0, 0.0, 0.0), 2.0, 1.0), 3.0, 0.7, 0.0);
             
-            // 推进器组 (直接包装成vec4f)
+            // 推进器组 - 使用传入的p参数
             let thruster1 = vec4f(sdCone(p - vec3f(-5.0, 0.0, 0.0), vec2f(0.8, 1.8)), 6.0, 0.95, 1.2);
             let thruster2 = vec4f(sdCone(p - vec3f(-5.0, 1.5, 1.5), vec2f(0.4, 1.2)), 6.0, 0.95, 1.2);
             let thruster3 = vec4f(sdCone(p - vec3f(-5.0, -1.5, 1.5), vec2f(0.4, 1.2)), 6.0, 0.95, 1.2);
             
-            // 卫星
+            // 卫星 - 使用传入的p参数
             let satellite = vec4f(sdBox(p - vec3f(3.0, 3.0, 3.0), vec3f(0.5, 0.5, 1.5)), 5.0, 0.8, 0.0);
             
             var res = ring;
@@ -772,9 +772,9 @@ const wgslScenes = {
         cameraPath : `
         let time = u.time * 0.15;
         var ro = vec3f(
-            12.0 * cos(time) * sin(time * 0.5),
-            3.0 * sin(time * 0.8),
-            12.0 * sin(time) * cos(time * 0.5)
+            8.0 * cos(time),
+            2.0 * sin(time * 0.5),
+            8.0 * sin(time)
         );
     `
     },
@@ -789,33 +789,33 @@ const wgslScenes = {
         }
         
         fn map(p: vec3f) -> vec4f {
-            // 地面网格
+            // 地面网格 - 使用传入的p参数
             let ground = vec4f(sdPlane(p), 1.0, 0.5, 0.0);
             
-            // 摩天楼群 (使用自定义函数返回vec4f)
-            let tower1 = sdSkyscraper(p, vec3f(2.0, 0.0, 1.0), 0.8, 8.0);
-            let tower2 = sdSkyscraper(p, vec3f(-1.0, 0.0, -2.0), 1.2, 12.0);
-            let tower3 = sdSkyscraper(p, vec3f(4.0, 0.0, -3.0), 0.7, 6.0);
-            let tower4 = sdSkyscraper(p, vec3f(-3.0, 0.0, 3.0), 1.0, 10.0);
+            // 摩天楼群 - 使用传入的p参数
+            let tower1 = sdSkyscraper(p, vec3f(2.0, 5.0, 1.0), 0.8, 8.0);
+            let tower2 = sdSkyscraper(p, vec3f(-1.0, 7.0, -2.0), 1.2, 12.0);
+            let tower3 = sdSkyscraper(p, vec3f(4.0, 4.0, -3.0), 0.7, 6.0);
+            let tower4 = sdSkyscraper(p, vec3f(-3.0, 6.0, 3.0), 1.0, 10.0);
             
-            // 悬浮平台
-            let platform = vec4f(sdBox(p - vec3f(0.0, 9.0, 0.0), vec3f(8.0, 0.5, 8.0)), 3.0, 0.8, 0.0);
+            // 悬浮平台 - 使用传入的p参数
+            let platform = vec4f(sdBox(p - vec3f(0.0, 12.0, 0.0), vec3f(8.0, 0.5, 8.0)), 3.0, 0.8, 0.0);
             
-            // 连接桥
-            let bridge = vec4f(sdCapsule(p - vec3f(0.0, 10.0, 0.0), 6.0, 0.3), 4.0, 0.7, 0.0);
+            // 连接桥 - 使用传入的p参数
+            let bridge = vec4f(sdCapsule(p - vec3f(0.0, 13.0, 0.0), 6.0, 0.3), 4.0, 0.7, 0.0);
             
-            // 动态飞行器
+            // 动态飞行器 - 使用传入的p参数
             let aircraft = vec4f(
                 sdEllipsoid(p - vec3f(
                     3.0 * sin(u.time * 0.3),
-                    7.0 + 2.0 * cos(u.time * 0.7),
+                    10.0 + 2.0 * cos(u.time * 0.7),
                     3.0 * cos(u.time * 0.3)
                 ), vec3f(1.5, 0.4, 0.8)),
                 5.0, 0.9, 0.0);
             
-            // 建筑细节 (窗户)
-            let window1 = sdWindow(p, vec3f(2.0, 3.0, 1.0));
-            let window2 = sdWindow(p, vec3f(2.0, 6.0, 1.0));
+            // 建筑细节 (窗户) - 使用传入的p参数
+            let window1 = sdWindow(p, vec3f(2.0, 8.0, 1.0));
+            let window2 = sdWindow(p, vec3f(2.0, 11.0, 1.0));
             
             var res = ground;
             res = opUnion(res, tower1);
@@ -862,9 +862,9 @@ const wgslScenes = {
         cameraPath : `
         let time = u.time * 0.2;
         var ro = vec3f(
-            15.0 * cos(time * 0.6),
-            8.0 + 3.0 * sin(time * 0.4),
-            15.0 * sin(time * 0.6)
+            10.0 * cos(time * 0.6),
+            10.0 + 3.0 * sin(time * 0.4),
+            10.0 * sin(time * 0.6)
         );
     `
     }
