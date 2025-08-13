@@ -236,19 +236,17 @@
         }
 
         .render-overlay {
-            position: relative;
-            bottom: auto;
-            left: auto;
-            right: 25px;
-            background: rgba(0, 20, 40, 0.85);
-            border-radius: 15px;
-            padding: 20px;
+            margin: 20px auto 0;
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 20px;
+            border-radius: 15px;
+            padding: 20px;
+            background: rgba(0, 20, 40, 0.85);
             border: 1px solid rgba(64, 224, 208, 0.4);
             backdrop-filter: blur(10px);
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            width: fit-content;
         }
 
         .info-item {
