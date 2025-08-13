@@ -770,6 +770,12 @@ async function switchBackend(backendName) {
             startTime = lastFrameTime;
             renderStatusSpan.textContent = "渲染中...";
             statusIndicator.className = "status-indicator status-optimal";
+
+            // 只在未暂停时启动渲染循环
+            if (!isPaused) {
+                // 启动循环（使用我们封装的 startRenderLoop）
+                startRenderLoop();
+            }
             animate(lastFrameTime);
 
             // 隐藏加载界面
