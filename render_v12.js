@@ -63,8 +63,8 @@ window.addEventListener('load', async () => {
 // --- 初始化画布 ---
 function setupCanvas() {
     const dpr = window.devicePixelRatio || 1;
-    canvas.width = Math.max(1, canvas.clientWidth * dpr * settings.resolutionScale);
-    canvas.height = Math.max(1, canvas.clientHeight * dpr * settings.resolutionScale);
+    canvas.width = Math.max(1, 1000 * settings.resolutionScale);
+    canvas.height = Math.max(1, 800 * settings.resolutionScale);
 }
 
 setupCanvas();
