@@ -620,203 +620,277 @@ const wgslScenes = {
     },
     cave : {
         map : `
-            fn map(p: vec3f) -> vec4f {
-                // 洞穴墙壁
-                let cave = vec4f(sdSphere(p, 10.0), 1.0, 0.5, 0.0);
-                
-                // 石笋 (从地面向上生长)
-                let stalagmite = vec4f(
-                    sdCone(
-                        p - vec3f(0.0, -8.0, 0.0), 
-                        vec2f(1.0, 3.0)
-                    ), 2.0, 0.8, 0.0);
-                
-                // 钟乳石 (从洞顶向下生长)
-                let stalactite = vec4f(
-                    sdCone(
-                        vec3f(p.x, -p.y + 8.0, p.z), 
-                        vec2f(0.7, 2.5)
-                    ), 3.0, 0.8, 0.0);
-                
-                // 发光水晶
-                let glowCrystal = vec4f(
-                    sdSphere(p - vec3f(3.0, -5.0, 2.0), 1.0), 
-                    4.0, 0.9, 1.0);
-                
-                let glowCrystal2 = vec4f(
-                    sdSphere(p - vec3f(-2.0, -6.0, -3.0), 0.8), 
-                    4.0, 0.9, 1.0);
-                
-                var res = cave;
-                res = opUnion(res, stalagmite);
-                res = opUnion(res, stalactite);
-                res = opUnion(res, glowCrystal);
-                res = opUnion(res, glowCrystal2);
-                
-                return res;
-            }
-        `,
+        fn map(p: vec3f) -> vec4f {
+            // 洞穴基础结构
+            let cave = vec4f(sdSphere(p, 12.0), 1.0, 0.5, 0.0);
+            
+            // 石笋阵列
+            let stalagmites = opUnion(
+                sdCone(p - vec3f(2.0, -9.0, 1.0), vec2f(0.8, 2.5)),
+                opUnion(
+                    sdCone(p - vec3f(-3.0, -10.0, -2.0), vec2f(1.2, 3.0)),
+                    sdCone(p - vec3f(4.0, -8.5, -3.0), vec2f(0.7, 2.0))
+                )
+            );
+            
+            // 钟乳石阵列
+            let stalactites = opUnion(
+                sdCone(vec3f(p.x, -p.y+11.0, p.z), vec2f(1.0, 2.8)),
+                opUnion(
+                    sdCone(vec3f(p.x+3.0, -p.y+9.5, p.z-2.0), vec2f(0.6, 1.8)),
+                    sdCone(vec3f(p.x-4.0, -p.y+10.0, p.z+3.0), vec2f(0.9, 2.2))
+                )
+            );
+            
+            // 水晶簇
+            let crystalCluster = opUnion(
+                sdOctahedron(p - vec3f(5.0, -7.0, 0.0), 1.2),
+                opUnion(
+                    sdOctahedron(p - vec3f(5.8, -6.5, 1.5), 0.8),
+                    sdOctahedron(p - vec3f(4.5, -6.0, -1.0), 0.6)
+                )
+            );
+            
+            // 地面细节
+            let rockDetail = sdBox(p - vec3f(0.0, -10.5, 0.0), vec3f(15.0, 0.3, 15.0));
+            
+            // 发光水晶柱
+            let glowColumn = sdCylinder(p - vec3f(0.0, -5.0, 0.0), 0.8, 4.0);
+            
+            var res = vec4f(cave.x, 1.0, 0.5, 0.0);
+            res = opUnion(res, vec4f(stalagmites, 2.0, 0.8, 0.0));
+            res = opUnion(res, vec4f(stalactites, 3.0, 0.8, 0.0));
+            res = opUnion(res, vec4f(crystalCluster, 4.0, 0.95, 0.8));
+            res = opUnion(res, vec4f(rockDetail, 5.0, 0.6, 0.0));
+            res = opUnion(res, vec4f(glowColumn, 6.0, 0.9, 1.5));
+            
+            return res;
+        }
+    `,
         getColor : `
-            fn get_color(mat_id: f32) -> vec3f {
-                if (mat_id < 1.5) {
-                    // 洞穴墙壁材质
-                    return vec3f(0.4, 0.3, 0.2);
-                }
-                if (mat_id < 2.5) {
-                    // 石笋材质
-                    return vec3f(0.8, 0.8, 0.75);
-                }
-                if (mat_id < 3.5) {
-                    // 钟乳石材质
-                    return vec3f(0.75, 0.75, 0.7);
-                }
-                // 发光水晶材质
-                return vec3f(0.2, 0.8, 0.5);
+        fn get_color(mat_id: f32) -> vec3f {
+            if (mat_id < 1.5) {
+                return vec3f(0.35, 0.3, 0.25); // 洞穴墙壁
             }
-        `,
+            if (mat_id < 2.5) {
+                return vec3f(0.85, 0.8, 0.75); // 石笋
+            }
+            if (mat_id < 3.5) {
+                return vec3f(0.8, 0.78, 0.7);  // 钟乳石
+            }
+            if (mat_id < 4.5) {
+                return vec3f(0.7, 0.9, 1.0);   // 水晶
+            }
+            if (mat_id < 5.5) {
+                return vec3f(0.25, 0.2, 0.15); // 岩石地面
+            }
+            return vec3f(0.1, 0.8, 0.6);       // 发光柱
+        }
+    `,
         getEmission : `
-            fn get_emission(mat_id: f32, glow: f32) -> vec3f {
-                if (glow > 0.0) {
-                    if (mat_id < 4.5) {
-                        return vec3f(0.1, 0.8, 0.4) * 4.0;
-                    }
-                }
-                return vec3f(0.0);
+        fn get_emission(mat_id: f32, glow: f32) -> vec3f {
+            if (mat_id > 5.5) {
+                return vec3f(0.1, 0.9, 0.7) * 6.0 * glow;
             }
-        `,
+            if (mat_id > 3.5 && mat_id < 4.5) {
+                return vec3f(0.6, 0.9, 1.0) * 0.8 * glow;
+            }
+            return vec3f(0.0);
+        }
+    `,
         cameraPath : `
-            let time = u.time * 0.08;
-            var ro = vec3f(8.0 * cos(time), -2.0, 8.0 * sin(time));
-        `
+        let time = u.time * 0.1;
+        var ro = vec3f(
+            10.0 * cos(time * 0.7) * sin(time * 0.3),
+            -3.0 + sin(time * 0.5),
+            10.0 * sin(time * 0.7) * cos(time * 0.3)
+        );
+    `
     },
+
     space : {
         map : `
-            fn map(p: vec3f) -> vec4f {
-                // 空间站主体 (环形)
-                let ring = vec4f(
-                    sdTorus(p - vec3f(0.0, 0.0, 0.0), vec2f(3.0, 0.5)),
-                    1.0, 0.85, 0.0);
-                
-                // 中心球体
-                let core = vec4f(
-                    sdSphere(p - vec3f(0.0, 0.0, 0.0), 1.2),
-                    1.0, 0.8, 0.0);
-                
-                // 太阳能板
-                let solarPanel1 = vec4f(
-                    sdBox(p - vec3f(0.0, 0.0, -4.5), vec3f(4.0, 0.1, 0.5)),
-                    2.0, 0.9, 0.0);
-                
-                let solarPanel2 = vec4f(
-                    sdBox(p - vec3f(0.0, 0.0, 4.5), vec3f(4.0, 0.1, 0.5)),
-                    2.0, 0.9, 0.0);
-                
-                // 居住舱
-                let habitat = vec4f(
-                    sdCapsule(p - vec3f(3.0, 0.0, 0.0), 1.5, 0.8),
-                    3.0, 0.7, 0.0);
-                
-                // 推进器
-                let thruster1 = vec4f(
-                    sdCone(p - vec3f(-3.0, 0.0, 0.0), vec2f(0.5, 1.2)),
-                    4.0, 0.9, 1.0);
-                
-                var res = ring;
-                res = opUnion(res, core);
-                res = opUnion(res, solarPanel1);
-                res = opUnion(res, solarPanel2);
-                res = opUnion(res, habitat);
-                res = opUnion(res, thruster1);
-                
-                return res;
-            }
-        `,
-        getColor : `
-            fn get_color(mat_id: f32) -> vec3f {
-                if (mat_id < 1.5) {
-                    // 金属灰色
-                    return vec3f(0.6, 0.6, 0.65);
-                }
-                if (mat_id < 2.5) {
-                    // 太阳能板深蓝色
-                    return vec3f(0.1, 0.1, 0.3);
-                }
-                if (mat_id < 3.5) {
-                    // 居住舱白色
-                    return vec3f(0.9, 0.9, 0.95);
-                }
-                // 推进器蓝色
-                return vec3f(0.0, 0.5, 1.0);
-            }
-        `,
-        getEmission : `
-            fn get_emission(mat_id: f32, glow: f32) -> vec3f {
-                if (glow > 0.0) {
-                    if (mat_id < 4.5) {
-                        return vec3f(0.0, 0.6, 1.0) * 5.0;
-                    }
-                }
-                return vec3f(0.0);
-            }
-        `,
-        cameraPath : `
-            let time = u.time * 0.12;
-            var ro = vec3f(
-                8.0 * cos(time) * sin(time * 0.3),
-                2.0 * sin(time * 0.5),
-                8.0 * sin(time) * cos(time * 0.3)
+        fn map(p: vec3f) -> vec4f {
+            // 主环形结构
+            let ring = vec4f(
+                sdTorus(p, vec2f(4.0, 0.7)),
+                1.0, 0.85, 0.0);
+            
+            // 中心球体
+            let core = vec4f(
+                sdSphere(p, 1.8),
+                2.0, 0.9, 0.0);
+            
+            // 太阳能板阵列
+            let solarPanels = opUnion(
+                sdBox(p - vec3f(0.0, 0.0, -6.0), vec3f(5.0, 0.1, 1.0)),
+                sdBox(p - vec3f(0.0, 0.0, 6.0), vec3f(5.0, 0.1, 1.0))
             );
-        `
+            
+            // 居住舱
+            let habitat = vec4f(
+                sdCapsule(p - vec3f(5.0, 0.0, 0.0), 2.0, 1.0),
+                3.0, 0.7, 0.0);
+            
+            // 推进器组
+            let thrusters = opUnion(
+                sdCone(p - vec3f(-5.0, 0.0, 0.0), vec2f(0.8, 1.8)),
+                opUnion(
+                    sdCone(p - vec3f(-5.0, 1.5, 1.5), vec2f(0.4, 1.2)),
+                    sdCone(p - vec3f(-5.0, -1.5, 1.5), vec2f(0.4, 1.2))
+                )
+            );
+            
+            // 卫星
+            let satellite = vec4f(
+                sdBox(p - vec3f(3.0, 3.0, 3.0), vec3f(0.5, 0.5, 1.5)),
+                5.0, 0.8, 0.0);
+            
+            var res = ring;
+            res = opUnion(res, core);
+            res = opUnion(res, vec4f(solarPanels, 4.0, 0.9, 0.0));
+            res = opUnion(res, habitat);
+            res = opUnion(res, vec4f(thrusters, 6.0, 0.95, 1.2));
+            res = opUnion(res, satellite);
+            
+            return res;
+        }
+    `,
+        getColor : `
+        fn get_color(mat_id: f32) -> vec3f {
+            if (mat_id < 1.5) {
+                return vec3f(0.7, 0.7, 0.75); // 主环
+            }
+            if (mat_id < 2.5) {
+                return vec3f(0.95, 0.95, 1.0); // 核心
+            }
+            if (mat_id < 3.5) {
+                return vec3f(0.9, 0.92, 0.95); // 居住舱
+            }
+            if (mat_id < 4.5) {
+                return vec3f(0.05, 0.05, 0.2); // 太阳能板
+            }
+            if (mat_id < 5.5) {
+                return vec3f(0.8, 0.8, 0.85); // 卫星
+            }
+            return vec3f(0.1, 0.3, 0.9);      // 推进器
+        }
+    `,
+        getEmission : `
+        fn get_emission(mat_id: f32, glow: f32) -> vec3f {
+            if (mat_id > 5.5) {
+                return vec3f(0.2, 0.5, 1.0) * 8.0 * glow;
+            }
+            return vec3f(0.0);
+        }
+    `,
+        cameraPath : `
+        let time = u.time * 0.15;
+        var ro = vec3f(
+            12.0 * cos(time) * sin(time * 0.5),
+            3.0 * sin(time * 0.8),
+            12.0 * sin(time) * cos(time * 0.5)
+        );
+    `
     },
+
     future : {
         map : `
-            fn map(p: vec3f) -> vec4f {
-                // 未来城市场景
-                let p_rep = opRep(p, vec3f(6.0, 10.0, 6.0));
-                
-                // 建筑主体
-                let building1 = vec4f(sdBox(p_rep - vec3f(0.0, 2.0, 0.0), vec3f(1.0, 3.0, 1.0)), 1.0, 0.85, 0.0);
-                let building2 = vec4f(sdBox(p_rep - vec3f(2.0, 3.0, 2.0), vec3f(0.8, 4.0, 0.8)), 1.0, 0.8, 0.0);
-                let building3 = vec4f(sdBox(p_rep - vec3f(-2.0, 4.0, -2.0), vec3f(0.6, 5.0, 0.6)), 1.0, 0.75, 0.0);
-                
-                // 地面
-                let ground = vec4f(sdPlane(p), 2.0, 0.5, 0.0);
-                
-                // 飞行器
-                let aircraft = vec4f(sdCapsule(p - vec3f(0.0, 5.0 + sin(u.time * 0.5), 0.0), 1.0, 0.5), 3.0, 0.9, 0.0);
-                
-                var res = ground;
-                res = opUnion(res, building1);
-                res = opUnion(res, building2);
-                res = opUnion(res, building3);
-                res = opUnion(res, aircraft);
-                
-                return res;
-            }
-        `,
+        fn map(p: vec3f) -> vec4f {
+            // 地面网格
+            let ground = vec4f(sdPlane(p), 1.0, 0.5, 0.0);
+            
+            // 摩天楼群
+            let towers = opUnion(
+                sdSkyscraper(p, vec3f(2.0, 0.0, 1.0), 0.8, 8.0),
+                opUnion(
+                    sdSkyscraper(p, vec3f(-1.0, 0.0, -2.0), 1.2, 12.0),
+                    opUnion(
+                        sdSkyscraper(p, vec3f(4.0, 0.0, -3.0), 0.7, 6.0),
+                        sdSkyscraper(p, vec3f(-3.0, 0.0, 3.0), 1.0, 10.0)
+                    )
+                )
+            );
+            
+            // 悬浮平台
+            let platform = vec4f(
+                sdBox(p - vec3f(0.0, 9.0, 0.0), vec3f(8.0, 0.5, 8.0)),
+                3.0, 0.8, 0.0);
+            
+            // 连接桥
+            let bridge = vec4f(
+                sdCapsule(p - vec3f(0.0, 10.0, 0.0), 6.0, 0.3),
+                4.0, 0.7, 0.0);
+            
+            // 动态飞行器
+            let aircraft = vec4f(
+                sdEllipsoid(p - vec3f(
+                    3.0 * sin(u.time * 0.3),
+                    7.0 + 2.0 * cos(u.time * 0.7),
+                    3.0 * cos(u.time * 0.3)
+                ), vec3f(1.5, 0.4, 0.8)),
+                5.0, 0.9, 0.0);
+            
+            // 建筑细节 (窗户)
+            let windows = opUnion(
+                sdWindow(p, vec3f(2.0, 3.0, 1.0)),
+                sdWindow(p, vec3f(2.0, 6.0, 1.0))
+            );
+            
+            var res = ground;
+            res = opUnion(res, vec4f(towers, 2.0, 0.85, 0.0));
+            res = opUnion(res, platform);
+            res = opUnion(res, bridge);
+            res = opUnion(res, aircraft);
+            res = opUnion(res, vec4f(windows, 6.0, 0.6, 1.0));
+            
+            return res;
+        }
+        
+        fn sdSkyscraper(p: vec3f, pos: vec3f, width: f32, height: f32) -> f32 {
+            return sdBox(p - pos, vec3f(width, height, width));
+        }
+        
+        fn sdWindow(p: vec3f, pos: vec3f) -> f32 {
+            return sdBox(p - pos, vec3f(0.1, 0.5, 0.01));
+        }
+    `,
         getColor : `
-            fn get_color(mat_id: f32) -> vec3f {
-                if (mat_id < 1.5) {
-                    // 建筑材质
-                    return vec3f(0.9, 0.3, 0.2);
-                }
-                if (mat_id < 2.5) {
-                    // 地面材质
-                    return vec3f(0.2, 0.2, 0.3);
-                }
-                // 飞行器材质
-                return vec3f(0.0, 0.8, 1.0);
+        fn get_color(mat_id: f32) -> vec3f {
+            if (mat_id < 1.5) {
+                return vec3f(0.1, 0.1, 0.15); // 地面
             }
-        `,
+            if (mat_id < 2.5) {
+                return vec3f(0.2, 0.6, 0.9);  // 摩天楼
+            }
+            if (mat_id < 3.5) {
+                return vec3f(0.9, 0.9, 0.95); // 平台
+            }
+            if (mat_id < 4.5) {
+                return vec3f(0.95, 0.7, 0.3); // 桥梁
+            }
+            if (mat_id < 5.5) {
+                return vec3f(0.95, 0.2, 0.1); // 飞行器
+            }
+            return vec3f(1.0, 0.9, 0.5);      // 窗户
+        }
+    `,
         getEmission : `
-            fn get_emission(mat_id: f32, glow: f32) -> vec3f {
-                return vec3f(0.0);
+        fn get_emission(mat_id: f32, glow: f32) -> vec3f {
+            if (mat_id > 5.5) {
+                return mix(vec3f(0.8, 0.7, 0.4), vec3f(1.0, 0.9, 0.6), abs(sin(u.time*2.0))) * 3.0;
             }
-        `,
+            return vec3f(0.0);
+        }
+    `,
         cameraPath : `
-            let time = u.time * 0.15;
-            var ro = vec3f(8.0 * cos(time), 4.0, 8.0 * sin(time));
-        `
+        let time = u.time * 0.2;
+        var ro = vec3f(
+            15.0 * cos(time * 0.6),
+            8.0 + 3.0 * sin(time * 0.4),
+            15.0 * sin(time * 0.6)
+        );
+    `
     }
 };
 
