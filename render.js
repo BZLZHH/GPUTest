@@ -32,6 +32,32 @@ const settings = {
     resolutionScale : 1.0
 };
 
+function setBackendCookie(backendName, days = 7) {
+    const d = new Date();
+    d.setTime(d.getTime() + days * 24 * 60 * 60 * 1000);
+    document.cookie = `gpuBackend=${encodeURIComponent(backendName)};expires=${d.toUTCString()};path=/;SameSite=Lax`;
+}
+function getBackendCookie() {
+    const match = document.cookie.match(/(?:^|; )gpuBackend=([^;]*)/);
+    return match ? decodeURIComponent(match[1]) : null;
+}
+function clearBackendCookie() { document.cookie = 'gpuBackend=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/'; }
+
+window.addEventListener('load', async () => {
+    // 尽量在任何获取 canvas context 之前读取 cookie 并设定后端选择
+    const backendName = getBackendCookie() || 'webgpu'; // 默认 webgpu
+    backendSelector.value = backendName;
+
+    // 调用你现有的 switchBackend（注意：switchBackend 内不应该再重复设置 cookie 否则会循环）
+    try {
+        await switchBackend(backendName);
+    }
+    catch (err) {
+        console.error('初始化后端失败：', err);
+        // 处理失败：降级到 webgl 或展示错误
+    }
+});
+
 // --- 初始化画布 ---
 function setupCanvas() {
     const dpr = window.devicePixelRatio || 1;
@@ -720,174 +746,159 @@ const shaderCore = `
             }
         `;
 
-function replaceCanvasAndSetup(size = {
-    w : 800,
-    h : 600
-}) {
-    const old = document.getElementById('canvas');
-    const parent = old.parentNode;
-    const newCanvas = document.createElement('canvas');
-
-    // 保留 id/attrs/样式/尺寸
-    newCanvas.id = old.id;
-    newCanvas.width = old.width || size.w;
-    newCanvas.height = old.height || size.h;
-    newCanvas.style.cssText = old.style.cssText;
-    // 如果你用了其他 data-* 属性，可以拷贝
-
-    parent.replaceChild(newCanvas, old);
-    return newCanvas;
-}
-
 // --- 主逻辑 ---
 async function switchBackend(backendName) {
 
-    async function switchBackendNoReload(backendName) {
-        if (animationFrameId) cancelAnimationFrame(animationFrameId);
-        if (currentBackend?.cleanup) currentBackend.cleanup();
+    if (animationFrameId) cancelAnimationFrame(animationFrameId);
+    if (currentBackend?.cleanup) currentBackend.cleanup();
 
-        // 替换 canvas（确保没有旧 context）
-        const newCanvas = replaceCanvasAndSetup({w : 800, h : 600});
-        // 重新 run setupCanvas() 或把 setupCanvas 里对 canvas 的引用更新为 newCanvas
-        setupCanvas(); // 确保这个函数会重新读取 document.getElementById('canvas')
+    loadingScreen.style.display = 'flex';
+    loadingScreen.style.opacity = '1';
+    renderStatusSpan.textContent = "初始化中...";
+    statusIndicator.className = "status-indicator status-good";
 
-        loadingScreen.style.display = 'flex';
-        loadingScreen.style.opacity = '1';
-        renderStatusSpan.textContent = "初始化中...";
-        statusIndicator.className = "status-indicator status-good";
+    setupCanvas();
 
-        try {
-            currentBackend = backendName === 'webgl' ? webglBackend : webgpuBackend;
-            const success = await (currentBackend === webgpuBackend ? webgpuBackend.init() : webglBackend.init());
+    try {
+        currentBackend = backendName === 'webgl' ? webglBackend : webgpuBackend;
+        const success = await (currentBackend === webgpuBackend ? webgpuBackend.init() : webglBackend.init());
 
-            if (success) {
-                lastFrameTime = performance.now();
-                frameCount = 0;
-                startTime = lastFrameTime;
-                renderStatusSpan.textContent = "渲染中...";
-                statusIndicator.className = "status-indicator status-optimal";
-                animate(lastFrameTime);
+        if (success) {
+            lastFrameTime = performance.now();
+            frameCount = 0;
+            startTime = lastFrameTime;
+            renderStatusSpan.textContent = "渲染中...";
+            statusIndicator.className = "status-indicator status-optimal";
+            animate(lastFrameTime);
 
-                // 隐藏加载界面
-                setTimeout(() => {
-                    loadingScreen.style.opacity = '0';
-                    setTimeout(() => { loadingScreen.style.display = 'none'; }, 500);
-                }, 500);
-            } else {
-                renderStatusSpan.textContent = "初始化失败";
-                statusIndicator.className = "status-indicator status-high";
-                loadingScreen.style.display = 'none';
-            }
-        }
-        catch (error) {
-            console.error("后端初始化错误:", error);
-            renderStatusSpan.textContent = "错误: " + error.message;
+            // 隐藏加载界面
+            setTimeout(() => {
+                loadingScreen.style.opacity = '0';
+                setTimeout(() => { loadingScreen.style.display = 'none'; }, 500);
+            }, 500);
+        } else {
+            renderStatusSpan.textContent = "初始化失败";
             statusIndicator.className = "status-indicator status-high";
             loadingScreen.style.display = 'none';
         }
     }
-
-    function animate(now) {
-        updateFPS(now);
-
-        try {
-            if (currentBackend && currentBackend.render) {
-                currentBackend.render(now - startTime);
-            }
-        }
-        catch (error) {
-            console.error("渲染错误:", error);
-            renderStatusSpan.textContent = "渲染错误: " + error.message;
-            statusIndicator.className = "status-indicator status-high";
-            cancelAnimationFrame(animationFrameId);
-            return;
-        }
-
-        animationFrameId = requestAnimationFrame(animate);
+    catch (error) {
+        console.error("后端初始化错误:", error);
+        renderStatusSpan.textContent = "错误: " + error.message;
+        statusIndicator.className = "status-indicator status-high";
+        loadingScreen.style.display = 'none';
     }
+}
 
-    function onSettingsChange() {
-        settings.bounces = parseInt(bouncesSlider.value);
-        settings.shadowQuality = parseInt(shadowSlider.value);
-        settings.maxSteps = parseInt(stepsSlider.value);
-        settings.resolutionScale = parseInt(resolutionSlider.value) / 100;
+function animate(now) {
+    updateFPS(now);
 
-        bouncesValueSpan.textContent = settings.bounces;
-        shadowValueSpan.textContent = settings.shadowQuality;
-        stepsValueSpan.textContent = settings.maxSteps;
-        resolutionValueSpan.textContent = parseInt(resolutionSlider.value) + "%";
-
-        setupCanvas();
-
-        // 重新初始化后端以应用新设置
-        if (currentBackend) {
-            switchBackend(backendSelector.value);
+    try {
+        if (currentBackend && currentBackend.render) {
+            currentBackend.render(now - startTime);
         }
     }
-
-    function onShaderChange() {
-        settings.scene = shaderSelector.value;
-        if (currentBackend) {
-            switchBackend(backendSelector.value);
-        }
+    catch (error) {
+        console.error("渲染错误:", error);
+        renderStatusSpan.textContent = "渲染错误: " + error.message;
+        statusIndicator.className = "status-indicator status-high";
+        cancelAnimationFrame(animationFrameId);
+        return;
     }
 
-    function onShaderPreset(e) {
-        shaderPresets.forEach(btn => btn.classList.remove('active'));
-        e.target.classList.add('active');
+    animationFrameId = requestAnimationFrame(animate);
+}
 
-        if (e.target.dataset.preset === 'extreme') {
-            bouncesSlider.value = 6;
-            shadowSlider.value = 48;
-            stepsSlider.value = 180;
-            resolutionSlider.value = 120;
-        } else {
-            bouncesSlider.value = 3;
-            shadowSlider.value = 24;
-            stepsSlider.value = 120;
-            resolutionSlider.value = 100;
-        }
+function onSettingsChange() {
+    settings.bounces = parseInt(bouncesSlider.value);
+    settings.shadowQuality = parseInt(shadowSlider.value);
+    settings.maxSteps = parseInt(stepsSlider.value);
+    settings.resolutionScale = parseInt(resolutionSlider.value) / 100;
 
-        onSettingsChange();
+    bouncesValueSpan.textContent = settings.bounces;
+    shadowValueSpan.textContent = settings.shadowQuality;
+    stepsValueSpan.textContent = settings.maxSteps;
+    resolutionValueSpan.textContent = parseInt(resolutionSlider.value) + "%";
+
+    setupCanvas();
+
+    // 重新初始化后端以应用新设置
+    if (currentBackend) {
+        switchBackend(backendSelector.value);
+    }
+}
+
+function onShaderChange() {
+    settings.scene = shaderSelector.value;
+    if (currentBackend) {
+        switchBackend(backendSelector.value);
+    }
+}
+
+function onShaderPreset(e) {
+    shaderPresets.forEach(btn => btn.classList.remove('active'));
+    e.target.classList.add('active');
+
+    if (e.target.dataset.preset === 'extreme') {
+        bouncesSlider.value = 6;
+        shadowSlider.value = 48;
+        stepsSlider.value = 180;
+        resolutionSlider.value = 120;
+    } else {
+        bouncesSlider.value = 3;
+        shadowSlider.value = 24;
+        stepsSlider.value = 120;
+        resolutionSlider.value = 100;
     }
 
-    function onSceneSelect(e) {
-        const scene = e.currentTarget.dataset.scene;
-        settings.scene = scene;
-
-        previewItems.forEach(item => item.classList.remove('active'));
-        e.currentTarget.classList.add('active');
-
-        shaderSelector.value = scene;
-
-        if (currentBackend) {
-            switchBackend(backendSelector.value);
-        }
-    }
-
-    // 事件监听器
-    backendSelector.addEventListener('change', (e) => switchBackend(e.target.value));
-    shaderSelector.addEventListener('change', onShaderChange);
-    bouncesSlider.addEventListener('input', onSettingsChange);
-    shadowSlider.addEventListener('input', onSettingsChange);
-    stepsSlider.addEventListener('input', onSettingsChange);
-    resolutionSlider.addEventListener('input', onSettingsChange);
-
-    shaderPresets.forEach(btn => { btn.addEventListener('click', onShaderPreset); });
-
-    previewItems.forEach(item => { item.addEventListener('click', onSceneSelect); });
-
-    // 初始设置
     onSettingsChange();
-    switchBackend(backendSelector.value);
+}
 
-    // 初始GPU信息
-    if (navigator.gpu) {
-        navigator.gpu.requestAdapter().then(adapter => {
-            if (adapter) {
-                // adapter.requestAdapterInfo().then(info => {
-                gpuModelSpan.textContent = /*info.description ||*/ 'GPU';
-                //});
-            }
-        });
+function onSceneSelect(e) {
+    const scene = e.currentTarget.dataset.scene;
+    settings.scene = scene;
+
+    previewItems.forEach(item => item.classList.remove('active'));
+    e.currentTarget.classList.add('active');
+
+    shaderSelector.value = scene;
+
+    if (currentBackend) {
+        switchBackend(backendSelector.value);
     }
+}
+
+// 事件监听器
+backendSelector.addEventListener('change', (e) => {
+    const newBackend = e.target.value;
+    // 记录用户选择（7天有效）
+    setBackendCookie(newBackend, 7);
+
+    // 如果你想在刷新前显示提示，可以短暂显示 UI，下面直接刷新
+    // 立即刷新页面以确保新的上下文在“干净”的 canvas 上被创建
+    location.reload();
+});
+shaderSelector.addEventListener('change', onShaderChange);
+bouncesSlider.addEventListener('input', onSettingsChange);
+shadowSlider.addEventListener('input', onSettingsChange);
+stepsSlider.addEventListener('input', onSettingsChange);
+resolutionSlider.addEventListener('input', onSettingsChange);
+
+shaderPresets.forEach(btn => { btn.addEventListener('click', onShaderPreset); });
+
+previewItems.forEach(item => { item.addEventListener('click', onSceneSelect); });
+
+// 初始设置
+onSettingsChange();
+switchBackend(backendSelector.value);
+
+// 初始GPU信息
+if (navigator.gpu) {
+    navigator.gpu.requestAdapter().then(adapter => {
+        if (adapter) {
+            // adapter.requestAdapterInfo().then(info => {
+            gpuModelSpan.textContent = /*info.description ||*/ 'GPU';
+            //});
+        }
+    });
+}
