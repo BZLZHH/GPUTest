@@ -768,76 +768,205 @@ const wgslScenes = {
 
     space : {
         map : `
-        fn map(p: vec3f) -> vec4f {
-            // 主环形结构 - 使用传入的p参数
-            let ring = vec4f(sdTorus(p, vec2f(4.0, 0.7)), 1.0, 0.85, 0.0);
-            
-            // 中心球体 - 使用传入的p参数
-            let core = vec4f(sdSphere(p, 1.8), 2.0, 0.9, 0.0);
-            
-            // 太阳能板阵列 - 使用传入的p参数
-            let solarPanel1 = vec4f(sdBox(p - vec3f(0.0, 0.0, -6.0), vec3f(5.0, 0.1, 1.0)), 4.0, 0.9, 0.0);
-            let solarPanel2 = vec4f(sdBox(p - vec3f(0.0, 0.0, 6.0), vec3f(5.0, 0.1, 1.0)), 4.0, 0.9, 0.0);
-            
-            // 居住舱 - 使用传入的p参数
-            let habitat = vec4f(sdCapsule(p - vec3f(5.0, 0.0, 0.0), 2.0, 1.0), 3.0, 0.7, 0.0);
-            
-            // 推进器组 - 使用传入的p参数
-            let thruster1 = vec4f(sdCone(p - vec3f(-5.0, 0.0, 0.0), vec2f(0.8, 1.8)), 6.0, 0.95, 1.2);
-            let thruster2 = vec4f(sdCone(p - vec3f(-5.0, 1.5, 1.5), vec2f(0.4, 1.2)), 6.0, 0.95, 1.2);
-            let thruster3 = vec4f(sdCone(p - vec3f(-5.0, -1.5, 1.5), vec2f(0.4, 1.2)), 6.0, 0.95, 1.2);
-            
-            // 卫星 - 使用传入的p参数
-            let satellite = vec4f(sdBox(p - vec3f(3.0, 3.0, 3.0), vec3f(0.5, 0.5, 1.5)), 5.0, 0.8, 0.0);
-            
-            var res = ring;
-            res = opUnion(res, core);
-            res = opUnion(res, solarPanel1);
-            res = opUnion(res, solarPanel2);
-            res = opUnion(res, habitat);
-            res = opUnion(res, thruster1);
-            res = opUnion(res, thruster2);
-            res = opUnion(res, thruster3);
-            res = opUnion(res, satellite);
-            
-            return res;
-        }
+    fn map(p: vec3f) -> vec4f {
+        // 主环形结构 - 增加细节
+        let ring = vec4f(sdTorus(p, vec2f(4.0, 0.7)), 1.0, 0.85, 0.0);
+        
+        // 中心球体 - 增加外壳细节
+        let core = vec4f(sdSphere(p, 1.8), 2.0, 0.9, 0.0);
+        let core_detail1 = vec4f(sdBox(p - vec3f(1.2, 0.0, 0.0), vec3f(0.8, 0.1, 0.1)), 2.0, 0.85, 0.0);
+        let core_detail2 = vec4f(sdBox(p - vec3f(0.0, 1.2, 0.0), vec3f(0.1, 0.8, 0.1)), 2.0, 0.85, 0.0);
+        let core_detail3 = vec4f(sdBox(p - vec3f(0.0, 0.0, 1.2), vec3f(0.1, 0.1, 0.8)), 2.0, 0.85, 0.0);
+        
+        // 太阳能板阵列 - 增加更多面板和角度变化
+        let solarPanel1 = vec4f(sdBox(rotateY(p - vec3f(0.0, 0.0, -8.0), 0.2), vec3f(8.0, 0.1, 1.5)), 4.0, 0.2, 0.0);
+        let solarPanel2 = vec4f(sdBox(rotateY(p - vec3f(0.0, 0.0, 8.0), -0.2), vec3f(8.0, 0.1, 1.5)), 4.0, 0.2, 0.0);
+        let solarPanel3 = vec4f(sdBox(rotateX(p - vec3f(0.0, -8.0, 0.0), 0.3), vec3f(8.0, 0.1, 1.5)), 4.0, 0.2, 0.0);
+        let solarPanel4 = vec4f(sdBox(rotateX(p - vec3f(0.0, 8.0, 0.0), -0.3), vec3f(8.0, 0.1, 1.5)), 4.0, 0.2, 0.0);
+        
+        // 居住舱 - 增加窗户细节
+        let habitat = vec4f(sdCapsule(p - vec3f(6.0, 0.0, 0.0), 2.5, 1.2), 3.0, 0.7, 0.0);
+        let window1 = vec4f(sdBox(p - vec3f(6.0, 0.0, 1.5), vec3f(0.1, 0.3, 0.05)), 8.0, 0.6, 1.5);
+        let window2 = vec4f(sdBox(p - vec3f(6.0, 0.8, 1.5), vec3f(0.1, 0.3, 0.05)), 8.0, 0.6, 1.5);
+        let window3 = vec4f(sdBox(p - vec3f(6.0, -0.8, 1.5), vec3f(0.1, 0.3, 0.05)), 8.0, 0.6, 1.5);
+        
+        // 推进器组 - 增加更多推进器和火焰效果
+        let thruster1 = vec4f(sdCone(p - vec3f(-6.0, 0.0, 0.0), vec2f(0.9, 2.2)), 6.0, 0.95, 1.5);
+        let thruster2 = vec4f(sdCone(p - vec3f(-6.0, 2.0, 2.0), vec2f(0.5, 1.5)), 6.0, 0.95, 1.5);
+        let thruster3 = vec4f(sdCone(p - vec3f(-6.0, -2.0, 2.0), vec2f(0.5, 1.5)), 6.0, 0.95, 1.5);
+        let thruster4 = vec4f(sdCone(p - vec3f(-6.0, 2.0, -2.0), vec2f(0.5, 1.5)), 6.0, 0.95, 1.5);
+        let thruster5 = vec4f(sdCone(p - vec3f(-6.0, -2.0, -2.0), vec2f(0.5, 1.5)), 6.0, 0.95, 1.5);
+        
+        // 火焰效果 (动态)
+        let flame_offset = sin(u.time * 3.0) * 0.1;
+        let flame1 = vec4f(sdCone(p - vec3f(-7.5, 0.0, 0.0), vec2f(1.2, 3.0 + flame_offset)), 9.0, 0.3, 2.5);
+        let flame2 = vec4f(sdCone(p - vec3f(-7.5, 2.0, 2.0), vec2f(0.7, 2.0 + flame_offset)), 9.0, 0.3, 2.5);
+        let flame3 = vec4f(sdCone(p - vec3f(-7.5, -2.0, 2.0), vec2f(0.7, 2.0 + flame_offset)), 9.0, 0.3, 2.5);
+        let flame4 = vec4f(sdCone(p - vec3f(-7.5, 2.0, -2.0), vec2f(0.7, 2.0 + flame_offset)), 9.0, 0.3, 2.5);
+        let flame5 = vec4f(sdCone(p - vec3f(-7.5, -2.0, -2.0), vec2f(0.7, 2.0 + flame_offset)), 9.0, 0.3, 2.5);
+        
+        // 卫星系统 - 增加更多卫星和轨道
+        let satellite1 = vec4f(sdBox(rotateY(p - vec3f(3.0 * sin(u.time*0.2), 4.0, 3.0 * cos(u.time*0.2)), 0.5), vec3f(0.5, 0.5, 1.5)), 5.0, 0.8, 0.2);
+        let satellite2 = vec4f(sdBox(rotateY(p - vec3f(4.0 * sin(u.time*0.3), 5.0, 4.0 * cos(u.time*0.3)), 0.5), vec3f(0.5, 0.5, 1.5)), 5.0, 0.8, 0.2);
+        let satellite3 = vec4f(sdBox(rotateY(p - vec3f(5.0 * sin(u.time*0.4), 3.5, 5.0 * cos(u.time*0.4)), 0.5), vec3f(0.5, 0.5, 1.5)), 5.0, 0.8, 0.2);
+        
+        // 天线系统
+        let antenna1 = vec4f(sdCylinder(p - vec3f(0.0, 5.0, 0.0), 0.05, 1.5), 7.0, 0.9, 0.0);
+        let antenna2 = vec4f(sdCylinder(p - vec3f(0.0, 5.0, 0.0), 0.03, 3.0), 7.0, 0.9, 0.0);
+        let antenna_top = vec4f(sdSphere(p - vec3f(0.0, 8.0, 0.0), 0.3), 7.0, 0.9, 0.0);
+        
+        // 对接端口
+        let dock1 = vec4f(sdCylinder(p - vec3f(0.0, 0.0, -4.0), 0.8, 0.5), 10.0, 0.7, 0.0);
+        let dock2 = vec4f(sdCylinder(p - vec3f(0.0, 0.0, 4.0), 0.8, 0.5), 10.0, 0.7, 0.0);
+        
+        // 小型飞船 (动态)
+        let ship = vec4f(sdCapsule(rotateY(p - vec3f(
+            3.0 * sin(u.time*0.5),
+            2.0 + sin(u.time*0.7),
+            3.0 * cos(u.time*0.5)
+        ), 0.8), 1.5, 0.5), 11.0, 0.8, 0.5);
+        
+        // 星空背景 (通过距离场模拟)
+        let stars = vec4f(1000.0 - length(p) * 0.1, 12.0, 0.95, 0.8);
+        
+        var res = ring;
+        res = opUnion(res, core);
+        res = opUnion(res, core_detail1);
+        res = opUnion(res, core_detail2);
+        res = opUnion(res, core_detail3);
+        res = opUnion(res, solarPanel1);
+        res = opUnion(res, solarPanel2);
+        res = opUnion(res, solarPanel3);
+        res = opUnion(res, solarPanel4);
+        res = opUnion(res, habitat);
+        res = opUnion(res, window1);
+        res = opUnion(res, window2);
+        res = opUnion(res, window3);
+        res = opUnion(res, thruster1);
+        res = opUnion(res, thruster2);
+        res = opUnion(res, thruster3);
+        res = opUnion(res, thruster4);
+        res = opUnion(res, thruster5);
+        res = opUnion(res, flame1);
+        res = opUnion(res, flame2);
+        res = opUnion(res, flame3);
+        res = opUnion(res, flame4);
+        res = opUnion(res, flame5);
+        res = opUnion(res, satellite1);
+        res = opUnion(res, satellite2);
+        res = opUnion(res, satellite3);
+        res = opUnion(res, antenna1);
+        res = opUnion(res, antenna2);
+        res = opUnion(res, antenna_top);
+        res = opUnion(res, dock1);
+        res = opUnion(res, dock2);
+        res = opUnion(res, ship);
+        res = opUnion(res, stars);
+        
+        return res;
+    }
     `,
         getColor : `
-        fn get_color(mat_id: f32) -> vec3f {
-            if (mat_id < 1.5) {
-                return vec3f(0.7, 0.7, 0.75); // 主环
-            }
-            if (mat_id < 2.5) {
-                return vec3f(0.95, 0.95, 1.0); // 核心
-            }
-            if (mat_id < 3.5) {
-                return vec3f(0.9, 0.92, 0.95); // 居住舱
-            }
-            if (mat_id < 4.5) {
-                return vec3f(0.05, 0.05, 0.2); // 太阳能板
-            }
-            if (mat_id < 5.5) {
-                return vec3f(0.8, 0.8, 0.85); // 卫星
-            }
-            return vec3f(0.1, 0.3, 0.9);      // 推进器
+    fn get_color(mat_id: f32) -> vec3f {
+        if (mat_id < 1.5) {
+            return vec3f(0.7, 0.7, 0.75); // 主环
         }
+        if (mat_id < 2.5) {
+            return vec3f(0.95, 0.95, 1.0); // 核心
+        }
+        if (mat_id < 3.5) {
+            return vec3f(0.9, 0.92, 0.95); // 居住舱
+        }
+        if (mat_id < 4.5) {
+            return vec3f(0.05, 0.05, 0.2); // 太阳能板
+        }
+        if (mat_id < 5.5) {
+            return vec3f(0.8, 0.8, 0.85); // 卫星
+        }
+        if (mat_id < 6.5) {
+            return vec3f(0.1, 0.3, 0.9);  // 推进器
+        }
+        if (mat_id < 7.5) {
+            return vec3f(0.9, 0.9, 0.9);  // 天线
+        }
+        if (mat_id < 8.5) {
+            return vec3f(1.0, 1.0, 0.8);  // 窗户
+        }
+        if (mat_id < 9.5) {
+            return vec3f(1.0, 0.5, 0.1);  // 火焰
+        }
+        if (mat_id < 10.5) {
+            return vec3f(0.6, 0.6, 0.7);  // 对接端口
+        }
+        if (mat_id < 11.5) {
+            return vec3f(0.3, 0.8, 0.9);  // 小型飞船
+        }
+        return vec3f(0.8, 0.9, 1.0);     // 星空背景
+    }
     `,
         getEmission : `
-        fn get_emission(mat_id: f32, glow: f32) -> vec3f {
-            if (mat_id > 5.5) {
-                return vec3f(0.2, 0.5, 1.0) * 8.0 * glow;
-            }
-            return vec3f(0.0);
+    fn get_emission(mat_id: f32, glow: f32) -> vec3f {
+        if (mat_id < 8.5 && mat_id > 7.5) {
+            // 窗户 - 随机闪烁效果
+            let flicker = fract(sin(u.time * 10.0) > 0.3 ? 1.0 : 0.8;
+            return vec3f(1.0, 0.9, 0.7) * 3.0 * flicker;
         }
+        if (mat_id < 9.5 && mat_id > 8.5) {
+            // 火焰 - 动态效果
+            let pulse = 0.8 + 0.2 * sin(u.time * 10.0);
+            return vec3f(1.0, 0.6, 0.2) * 8.0 * pulse;
+        }
+        if (mat_id < 12.5 && mat_id > 11.5) {
+            // 星空背景 - 微弱发光
+            return vec3f(0.8, 0.9, 1.0) * 0.5;
+        }
+        if (glow > 0.0) {
+            // 其他发光物体
+            if (mat_id < 5.5 && mat_id > 4.5) {
+                // 卫星
+                return vec3f(0.8, 0.85, 1.0) * 0.5;
+            }
+            if (mat_id < 6.5 && mat_id > 5.5) {
+                // 推进器
+                return vec3f(0.2, 0.5, 1.0) * 6.0 * (0.9 + 0.1 * sin(u.time * 5.0));
+            }
+            if (mat_id < 11.5 && mat_id > 10.5) {
+                // 小型飞船
+                return vec3f(0.3, 0.8, 1.0) * 1.5;
+            }
+        }
+        return vec3f(0.0);
+    }
     `,
         cameraPath : `
-        let time = u.time * 0.15;
-        var ro = vec3f(
-            8.0 * cos(time),
-            2.0 * sin(time * 0.5),
-            8.0 * sin(time)
+    let time = u.time * 0.15;
+    var ro = vec3f(
+        12.0 * cos(time * 0.7),
+        3.0 + 2.0 * sin(time * 0.4),
+        12.0 * sin(time * 0.7)
+    );
+    `,
+        // 添加旋转函数
+        extraFunctions : `
+    fn rotateY(p: vec3f, angle: f32) -> vec3f {
+        let c = cos(angle);
+        let s = sin(angle);
+        return vec3f(
+            p.x * c - p.z * s,
+            p.y,
+            p.x * s + p.z * c
         );
+    }
+    
+    fn rotateX(p: vec3f, angle: f32) -> vec3f {
+        let c = cos(angle);
+        let s = sin(angle);
+        return vec3f(
+            p.x,
+            p.y * c - p.z * s,
+            p.y * s + p.z * c
+        );
+    }
     `
     },
     future : {
