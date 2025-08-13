@@ -631,31 +631,28 @@ const wgslScenes = {
     cave : {
         map : `
         fn map(p: vec3f) -> vec4f {
-            // 洞穴基础结构
-            let cave = vec4f(sdSphere(p, 12.0), 1.0, 0.5, 0.0);
+            // 地面
+            let ground = vec4f(sdPlane(p - vec3f(0.0, -3.0, 0.0)), 1.0, 0.5, 0.0);
             
-            // 石笋阵列 (直接包装成vec4f)
-            let stalagmite1 = vec4f(sdCone(p - vec3f(2.0, -9.0, 1.0), vec2f(0.8, 2.5)), 2.0, 0.8, 0.0);
-            let stalagmite2 = vec4f(sdCone(p - vec3f(-3.0, -10.0, -2.0), vec2f(1.2, 3.0)), 2.0, 0.8, 0.0);
-            let stalagmite3 = vec4f(sdCone(p - vec3f(4.0, -8.5, -3.0), vec2f(0.7, 2.0)), 2.0, 0.8, 0.0);
+            // 石笋阵列
+            let stalagmite1 = vec4f(sdCone(p - vec3f(2.0, 0.0, 1.0), vec2f(0.5, 2.0)), 2.0, 0.8, 0.0);
+            let stalagmite2 = vec4f(sdCone(p - vec3f(-3.0, 0.0, -2.0), vec2f(0.7, 2.5)), 2.0, 0.8, 0.0);
+            let stalagmite3 = vec4f(sdCone(p - vec3f(4.0, 0.0, -3.0), vec2f(0.4, 1.8)), 2.0, 0.8, 0.0);
             
-            // 钟乳石阵列 (直接包装成vec4f)
-            let stalactite1 = vec4f(sdCone(vec3f(p.x, -p.y+11.0, p.z), vec2f(1.0, 2.8)), 3.0, 0.8, 0.0);
-            let stalactite2 = vec4f(sdCone(vec3f(p.x+3.0, -p.y+9.5, p.z-2.0), vec2f(0.6, 1.8)), 3.0, 0.8, 0.0);
-            let stalactite3 = vec4f(sdCone(vec3f(p.x-4.0, -p.y+10.0, p.z+3.0), vec2f(0.9, 2.2)), 3.0, 0.8, 0.0);
+            // 钟乳石阵列
+            let stalactite1 = vec4f(sdCone(vec3f(p.x, -p.y + 8.0, p.z) - vec3f(0.0, 4.0, 0.0), vec2f(0.6, 2.0)), 3.0, 0.8, 0.0);
+            let stalactite2 = vec4f(sdCone(vec3f(p.x+3.0, -p.y + 7.0, p.z-2.0), vec2f(0.5, 1.5)), 3.0, 0.8, 0.0);
+            let stalactite3 = vec4f(sdCone(vec3f(p.x-4.0, -p.y + 7.5, p.z+3.0), vec2f(0.7, 1.8)), 3.0, 0.8, 0.0);
             
-            // 水晶簇 (直接包装成vec4f)
-            let crystal1 = vec4f(sdOctahedron(p - vec3f(5.0, -7.0, 0.0), 1.2), 4.0, 0.95, 0.8);
-            let crystal2 = vec4f(sdOctahedron(p - vec3f(5.8, -6.5, 1.5), 0.8), 4.0, 0.95, 0.8);
-            let crystal3 = vec4f(sdOctahedron(p - vec3f(4.5, -6.0, -1.0), 0.6), 4.0, 0.95, 0.8);
-            
-            // 地面细节
-            let groundDetail = vec4f(sdBox(p - vec3f(0.0, -10.5, 0.0), vec3f(15.0, 0.3, 15.0)), 5.0, 0.6, 0.0);
+            // 水晶簇
+            let crystal1 = vec4f(sdOctahedron(p - vec3f(3.0, 1.0, 0.0), 0.8), 4.0, 0.95, 0.8);
+            let crystal2 = vec4f(sdOctahedron(p - vec3f(3.8, 1.5, 1.5), 0.5), 4.0, 0.95, 0.8);
+            let crystal3 = vec4f(sdOctahedron(p - vec3f(2.5, 0.8, -1.0), 0.4), 4.0, 0.95, 0.8);
             
             // 发光水晶柱
-            let glowColumn = vec4f(sdCylinder(p - vec3f(0.0, -5.0, 0.0), 0.8, 4.0), 6.0, 0.9, 1.5);
+            let glowColumn = vec4f(sdCylinder(p - vec3f(0.0, 1.0, 0.0), 0.5, 2.0), 5.0, 0.9, 1.5);
             
-            var res = cave;
+            var res = ground;
             res = opUnion(res, stalagmite1);
             res = opUnion(res, stalagmite2);
             res = opUnion(res, stalagmite3);
@@ -665,7 +662,6 @@ const wgslScenes = {
             res = opUnion(res, crystal1);
             res = opUnion(res, crystal2);
             res = opUnion(res, crystal3);
-            res = opUnion(res, groundDetail);
             res = opUnion(res, glowColumn);
             
             return res;
@@ -674,7 +670,7 @@ const wgslScenes = {
         getColor : `
         fn get_color(mat_id: f32) -> vec3f {
             if (mat_id < 1.5) {
-                return vec3f(0.35, 0.3, 0.25); // 洞穴墙壁
+                return vec3f(0.35, 0.3, 0.25); // 地面
             }
             if (mat_id < 2.5) {
                 return vec3f(0.85, 0.8, 0.75); // 石笋
@@ -685,15 +681,12 @@ const wgslScenes = {
             if (mat_id < 4.5) {
                 return vec3f(0.7, 0.9, 1.0);   // 水晶
             }
-            if (mat_id < 5.5) {
-                return vec3f(0.25, 0.2, 0.15); // 岩石地面
-            }
             return vec3f(0.1, 0.8, 0.6);       // 发光柱
         }
     `,
         getEmission : `
         fn get_emission(mat_id: f32, glow: f32) -> vec3f {
-            if (mat_id > 5.5) {
+            if (mat_id > 4.5) {
                 return vec3f(0.1, 0.9, 0.7) * 6.0 * glow;
             }
             if (mat_id > 3.5 && mat_id < 4.5) {
@@ -705,9 +698,9 @@ const wgslScenes = {
         cameraPath : `
         let time = u.time * 0.1;
         var ro = vec3f(
-            10.0 * cos(time * 0.7) * sin(time * 0.3),
-            -3.0 + sin(time * 0.5),
-            10.0 * sin(time * 0.7) * cos(time * 0.3)
+            5.0 * cos(time * 0.7),
+            3.0 + sin(time * 0.5),
+            5.0 * sin(time * 0.7)
         );
     `
     },
