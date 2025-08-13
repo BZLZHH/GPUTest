@@ -768,6 +768,16 @@ const wgslScenes = {
 
     space : {
         map : `
+        fn rotateY(p: vec3f, angle: f32) -> vec3f {
+            let c = cos(angle);
+            let s = sin(angle);
+            return vec3f(
+                c * p.x + s * p.z,
+                p.y,
+                -s * p.x + c * p.z
+            );
+        }
+
     fn map(p: vec3f) -> vec4f {
         // 主环形结构 - 增加细节
         let ring = vec4f(sdTorus(p, vec2f(4.0, 0.7)), 1.0, 0.85, 0.0);
