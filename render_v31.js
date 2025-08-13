@@ -1003,92 +1003,250 @@ const wgslScenes = {
     },
     future : {
         map : `
-        fn sdSkyscraper(p: vec3f, pos: vec3f, width: f32, height: f32) -> vec4f {
-            return vec4f(sdBox(p - pos, vec3f(width, height, width)), 2.0, 0.85, 0.0);
+    fn sdSkyscraper(p: vec3f, pos: vec3f, width: f32, height: f32) -> vec4f {
+        return vec4f(sdBox(p - pos, vec3f(width, height, width)), 2.0, 0.85, 0.0);
+    }
+    
+    fn sdWindow(p: vec3f, pos: vec3f) -> vec4f {
+        return vec4f(sdBox(p - pos, vec3f(0.1, 0.5, 0.01)), 6.0, 0.6, 1.0);
+    }
+    
+    fn sdHologram(p: vec3f, pos: vec3f, size: f32) -> vec4f {
+        let t = u.time * 0.5;
+        let pulse = 0.8 + 0.2 * sin(t * 3.0);
+        let hologram = sdSphere(p - pos, size * pulse);
+        return vec4f(hologram, 8.0, 0.1, 2.5);
+    }
+
+    fn rotateX(p: vec3f, angle: f32) -> vec3f {
+        let c = cos(angle);
+        let s = sin(angle);
+        return vec3f(p.x, c * p.y - s * p.z, s * p.y + c * p.z);
+    }
+
+    fn rotateY(p: vec3f, angle: f32) -> vec3f {
+        let c = cos(angle);
+        let s = sin(angle);
+        // 常用右手系： x' = c*x + s*z ; z' = -s*x + c*z
+        return vec3f(c * p.x + s * p.z, p.y, -s * p.x + c * p.z);
+    }
+
+    fn rotateZ(p: vec3f, angle: f32) -> vec3f {
+        let c = cos(angle);
+        let s = sin(angle);
+        return vec3f(c * p.x - s * p.y, s * p.x + c * p.y, p.z);
+    }
+    
+    fn map(p: vec3f) -> vec4f {
+        // 地面网格 - 带反射效果
+        let ground = vec4f(sdPlane(p - vec3f(0.0, -0.1, 0.0)), 1.0, 0.5, 0.1);
+        
+        // 摩天楼群 - 增加更多高楼和细节
+        let tower1 = sdSkyscraper(p, vec3f(2.0, 8.0, 1.0), 0.8, 25.0);
+        let tower2 = sdSkyscraper(p, vec3f(-3.0, 10.0, -2.0), 1.2, 32.0);
+        let tower3 = sdSkyscraper(p, vec3f(5.0, 7.0, -4.0), 0.7, 20.0);
+        let tower4 = sdSkyscraper(p, vec3f(-4.0, 9.0, 4.0), 1.0, 28.0);
+        let tower5 = sdSkyscraper(p, vec3f(0.0, 12.0, -6.0), 1.5, 40.0);
+        let tower6 = sdSkyscraper(p, vec3f(6.0, 6.0, 5.0), 1.1, 22.0);
+        
+        // 悬浮平台系统 - 多层平台
+        let platform1 = vec4f(sdBox(p - vec3f(0.0, 20.0, 0.0), vec3f(15.0, 0.8, 15.0)), 3.0, 0.8, 0.2);
+        let platform2 = vec4f(sdBox(p - vec3f(8.0, 30.0, -8.0), vec3f(8.0, 0.6, 8.0)), 3.0, 0.8, 0.2);
+        let platform3 = vec4f(sdBox(p - vec3f(-10.0, 25.0, 10.0), vec3f(6.0, 0.6, 6.0)), 3.0, 0.8, 0.2);
+        
+        // 连接桥系统 - 更多桥梁
+        let bridge1 = vec4f(sdCapsule(p - vec3f(0.0, 21.0, 0.0), 12.0, 0.4), 4.0, 0.7, 0.1);
+        let bridge2 = vec4f(sdCapsule(p - vec3f(8.0, 31.0, -8.0), 6.0, 0.3), 4.0, 0.7, 0.1);
+        let bridge3 = vec4f(sdCapsule(p - vec3f(-10.0, 26.0, 10.0), 4.0, 0.3), 4.0, 0.7, 0.1);
+        
+        // 动态飞行器 - 增加更多飞行器
+        let t = u.time;
+        let aircraft1 = vec4f(
+            sdEllipsoid(p - vec3f(
+                5.0 * sin(t * 0.3),
+                15.0 + 2.0 * cos(t * 0.7),
+                5.0 * cos(t * 0.3)
+            ), vec3f(1.8, 0.5, 1.0)), 5.0, 0.9, 0.3);
+        
+        let aircraft2 = vec4f(
+            sdEllipsoid(p - vec3f(
+                3.0 * cos(t * 0.4),
+                18.0 + 1.5 * sin(t * 0.8),
+                4.0 * sin(t * 0.4)
+            ), vec3f(1.2, 0.3, 0.6)), 5.0, 0.9, 0.3);
+        
+        let aircraft3 = vec4f(
+            sdEllipsoid(p - vec3f(
+                2.0 * sin(t * 0.5),
+                22.0 + 1.8 * cos(t * 0.6),
+                3.0 * cos(t * 0.5)
+            ), vec3f(0.8, 0.2, 0.4)), 5.0, 0.9, 0.3);
+        
+        // 建筑窗户 - 大量增加窗户
+        var windows = vec4f(1000.0, 0.0, 0.0, 0.0);
+        for (var i: i32 = 0; i < 10; i = i + 1) {
+            for (var j: i32 = 0; j < 8; j = j + 1) {
+                let window = sdWindow(p, vec3f(2.0, 10.0 + f32(j)*3.0, 1.0 + f32(i)*0.3));
+                windows = opUnion(windows, window);
+                
+                let window2 = sdWindow(p, vec3f(-3.0, 12.0 + f32(j)*3.0, -2.0 + f32(i)*0.3));
+                windows = opUnion(windows, window2);
+                
+                let window3 = sdWindow(p, vec3f(5.0, 8.0 + f32(j)*3.0, -4.0 + f32(i)*0.3));
+                windows = opUnion(windows, window3);
+            }
         }
         
-        fn sdWindow(p: vec3f, pos: vec3f) -> vec4f {
-            return vec4f(sdBox(p - pos, vec3f(0.1, 0.5, 0.01)), 6.0, 0.6, 1.0);
-        }
+        // 全息广告牌
+        let hologram1 = sdHologram(p, vec3f(0.0, 25.0, 0.0), 3.0);
+        let hologram2 = sdHologram(p, vec3f(10.0, 20.0, -10.0), 2.0);
         
-        fn map(p: vec3f) -> vec4f {
-            // 地面网格 - 使用传入的p参数
-            let ground = vec4f(sdPlane(p), 1.0, 0.5, 0.0);
-            
-            // 摩天楼群 - 使用传入的p参数
-            let tower1 = sdSkyscraper(p, vec3f(2.0, 5.0, 1.0), 0.8, 8.0);
-            let tower2 = sdSkyscraper(p, vec3f(-1.0, 7.0, -2.0), 1.2, 12.0);
-            let tower3 = sdSkyscraper(p, vec3f(4.0, 4.0, -3.0), 0.7, 6.0);
-            let tower4 = sdSkyscraper(p, vec3f(-3.0, 6.0, 3.0), 1.0, 10.0);
-            
-            // 悬浮平台 - 使用传入的p参数
-            let platform = vec4f(sdBox(p - vec3f(0.0, 12.0, 0.0), vec3f(8.0, 0.5, 8.0)), 3.0, 0.8, 0.0);
-            
-            // 连接桥 - 使用传入的p参数
-            let bridge = vec4f(sdCapsule(p - vec3f(0.0, 13.0, 0.0), 6.0, 0.3), 4.0, 0.7, 0.0);
-            
-            // 动态飞行器 - 使用传入的p参数
-            let aircraft = vec4f(
-                sdEllipsoid(p - vec3f(
-                    3.0 * sin(u.time * 0.3),
-                    10.0 + 2.0 * cos(u.time * 0.7),
-                    3.0 * cos(u.time * 0.3)
-                ), vec3f(1.5, 0.4, 0.8)),
-                5.0, 0.9, 0.0);
-            
-            // 建筑细节 (窗户) - 使用传入的p参数
-            let window1 = sdWindow(p, vec3f(2.0, 8.0, 1.0));
-            let window2 = sdWindow(p, vec3f(2.0, 11.0, 1.0));
-            
-            var res = ground;
-            res = opUnion(res, tower1);
-            res = opUnion(res, tower2);
-            res = opUnion(res, tower3);
-            res = opUnion(res, tower4);
-            res = opUnion(res, platform);
-            res = opUnion(res, bridge);
-            res = opUnion(res, aircraft);
-            res = opUnion(res, window1);
-            res = opUnion(res, window2);
-            
-            return res;
-        }
+        // 悬浮车辆
+        let vehicle1 = vec4f(sdBox(rotateY(p - vec3f(
+            4.0 * sin(t * 0.2),
+            5.0,
+            4.0 * cos(t * 0.2)
+        ), 0.5), vec3f(1.0, 0.4, 0.6)), 7.0, 0.8, 0.4);
+        
+        let vehicle2 = vec4f(sdBox(rotateY(p - vec3f(
+            3.0 * cos(t * 0.3),
+            6.0,
+            3.0 * sin(t * 0.3)
+        ), -0.5), vec3f(0.8, 0.3, 0.5)), 7.0, 0.8, 0.4);
+        
+        // 能量塔
+        let energyTower = vec4f(sdCylinder(p - vec3f(-8.0, 0.0, -8.0), 1.0, 15.0), 9.0, 0.9, 1.8);
+        let energyCore = vec4f(sdSphere(p - vec3f(-8.0, 15.0, -8.0), 2.0), 10.0, 0.1, 3.0);
+        
+        // 中央公园
+        let park = vec4f(sdBox(p - vec3f(0.0, 0.1, 10.0), vec3f(8.0, 0.2, 5.0)), 11.0, 0.3, 0.0);
+        let tree1 = vec4f(sdCone(p - vec3f(2.0, 0.0, 10.0), vec2f(0.5, 2.0)), 12.0, 0.7, 0.0);
+        let tree2 = vec4f(sdCone(p - vec3f(-2.0, 0.0, 12.0), vec2f(0.6, 2.5)), 12.0, 0.7, 0.0);
+        
+        var res = ground;
+        res = opUnion(res, tower1);
+        res = opUnion(res, tower2);
+        res = opUnion(res, tower3);
+        res = opUnion(res, tower4);
+        res = opUnion(res, tower5);
+        res = opUnion(res, tower6);
+        res = opUnion(res, platform1);
+        res = opUnion(res, platform2);
+        res = opUnion(res, platform3);
+        res = opUnion(res, bridge1);
+        res = opUnion(res, bridge2);
+        res = opUnion(res, bridge3);
+        res = opUnion(res, aircraft1);
+        res = opUnion(res, aircraft2);
+        res = opUnion(res, aircraft3);
+        res = opUnion(res, windows);
+        res = opUnion(res, hologram1);
+        res = opUnion(res, hologram2);
+        res = opUnion(res, vehicle1);
+        res = opUnion(res, vehicle2);
+        res = opUnion(res, energyTower);
+        res = opUnion(res, energyCore);
+        res = opUnion(res, park);
+        res = opUnion(res, tree1);
+        res = opUnion(res, tree2);
+        
+        return res;
+    }
     `,
         getColor : `
-        fn get_color(mat_id: f32) -> vec3f {
-            if (mat_id < 1.5) {
-                return vec3f(0.1, 0.1, 0.15); // 地面
-            }
-            if (mat_id < 2.5) {
-                return vec3f(0.2, 0.6, 0.9);  // 摩天楼
-            }
-            if (mat_id < 3.5) {
-                return vec3f(0.9, 0.9, 0.95); // 平台
-            }
-            if (mat_id < 4.5) {
-                return vec3f(0.95, 0.7, 0.3); // 桥梁
-            }
-            if (mat_id < 5.5) {
-                return vec3f(0.95, 0.2, 0.1); // 飞行器
-            }
-            return vec3f(1.0, 0.9, 0.5);      // 窗户
+    fn get_color(mat_id: f32) -> vec3f {
+        if (mat_id < 1.5) {
+            return vec3f(0.1, 0.1, 0.15); // 地面
         }
+        if (mat_id < 2.5) {
+            return vec3f(0.2, 0.6, 0.9);  // 摩天楼
+        }
+        if (mat_id < 3.5) {
+            return vec3f(0.9, 0.9, 0.95); // 平台
+        }
+        if (mat_id < 4.5) {
+            return vec3f(0.95, 0.7, 0.3); // 桥梁
+        }
+        if (mat_id < 5.5) {
+            return vec3f(0.95, 0.2, 0.1); // 飞行器
+        }
+        if (mat_id < 6.5) {
+            return vec3f(1.0, 0.9, 0.5);  // 窗户
+        }
+        if (mat_id < 7.5) {
+            return vec3f(0.7, 0.8, 0.9);  // 悬浮车辆
+        }
+        if (mat_id < 8.5) {
+            return vec3f(0.5, 0.9, 0.8);  // 全息广告
+        }
+        if (mat_id < 9.5) {
+            return vec3f(0.9, 0.9, 0.95); // 能量塔
+        }
+        if (mat_id < 10.5) {
+            return vec3f(0.9, 0.5, 0.1);  // 能量核心
+        }
+        if (mat_id < 11.5) {
+            return vec3f(0.2, 0.7, 0.3);  // 公园地面
+        }
+        return vec3f(0.3, 0.5, 0.2);      // 树木
+    }
     `,
         getEmission : `
-        fn get_emission(mat_id: f32, glow: f32) -> vec3f {
-            if (mat_id > 5.5) {
-                return mix(vec3f(0.8, 0.7, 0.4), vec3f(1.0, 0.9, 0.6), abs(sin(u.time*2.0))) * 3.0;
-            }
-            return vec3f(0.0);
+    fn get_emission(mat_id: f32, glow: f32) -> vec3f {
+        let t = u.time;
+        
+        if (mat_id < 6.5 && mat_id > 5.5) {
+            // 窗户 - 随机闪烁
+            let flicker = select(0.8, 1.2, fract(t * 0.5) > 0.7);
+            return vec3f(1.0, 0.95, 0.8) * 3.0 * flicker;
         }
+        if (mat_id < 8.5 && mat_id > 7.5) {
+            // 全息广告 - 脉动效果
+            let pulse = 0.8 + 0.2 * sin(t * 3.0);
+            return mix(vec3f(0.2, 0.9, 0.8), vec3f(0.8, 0.2, 0.9), abs(sin(t))) * 4.0 * pulse;
+        }
+        if (mat_id < 10.5 && mat_id > 9.5) {
+            // 能量核心 - 强烈脉动
+            let pulse = 0.7 + 0.3 * sin(t * 5.0);
+            return vec3f(1.0, 0.7, 0.2) * 8.0 * pulse;
+        }
+        if (glow > 0.0) {
+            // 其他发光物体
+            if (mat_id < 5.5 && mat_id > 4.5) {
+                // 飞行器 - 引擎光效
+                return vec3f(1.0, 0.3, 0.1) * 3.0;
+            }
+            if (mat_id < 7.5 && mat_id > 6.5) {
+                // 悬浮车辆 - 灯光
+                return vec3f(0.8, 0.8, 1.0) * 2.0;
+            }
+            if (mat_id < 9.5 && mat_id > 8.5) {
+                // 能量塔 - 微弱发光
+                return vec3f(0.5, 0.8, 1.0) * 1.5;
+            }
+        }
+        return vec3f(0.0);
+    }
     `,
         cameraPath : `
-        let time = u.time * 0.2;
-        var ro = vec3f(
-            10.0 * cos(time * 0.6),
-            10.0 + 3.0 * sin(time * 0.4),
-            10.0 * sin(time * 0.6)
+    let time = u.time * 0.2;
+    var ro = vec3f(
+        15.0 * cos(time * 0.7),
+        12.0 + 4.0 * sin(time * 0.4),
+        15.0 * sin(time * 0.7)
+    );
+    `,
+        // 添加旋转函数
+        extraFunctions : `
+    fn rotateY(p: vec3f, angle: f32) -> vec3f {
+        let c = cos(angle);
+        let s = sin(angle);
+        return vec3f(
+            p.x * c - p.z * s,
+            p.y,
+            p.x * s + p.z * c
         );
+    }
     `
     }
 };
