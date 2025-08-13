@@ -768,15 +768,33 @@ const wgslScenes = {
 
     space : {
         map : `
+        // 绕 X 轴旋转（angle 单位：弧度）
+        fn rotateX(p: vec3f, angle: f32) -> vec3f {
+            let c = cos(angle);
+            let s = sin(angle);
+            // y' = c*y - s*z
+            // z' = s*y + c*z
+            return vec3f(p.x, c * p.y - s * p.z, s * p.y + c * p.z);
+        }
+            
+        // 绕 Y 轴旋转（angle 单位：弧度）
         fn rotateY(p: vec3f, angle: f32) -> vec3f {
             let c = cos(angle);
             let s = sin(angle);
-            return vec3f(
-                c * p.x + s * p.z,
-                p.y,
-                -s * p.x + c * p.z
-            );
+            // x' = c*x + s*z
+            // z' = -s*x + c*z
+            return vec3f(c * p.x + s * p.z, p.y, -s * p.x + c * p.z);
         }
+            
+        // 绕 Z 轴旋转（angle 单位：弧度）
+        fn rotateZ(p: vec3f, angle: f32) -> vec3f {
+            let c = cos(angle);
+            let s = sin(angle);
+            // x' = c*x - s*y
+            // y' = s*x + c*y
+            return vec3f(c * p.x - s * p.y, s * p.x + c * p.y, p.z);
+        }
+
 
     fn map(p: vec3f) -> vec4f {
         // 主环形结构 - 增加细节
