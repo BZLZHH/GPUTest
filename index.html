@@ -1018,6 +1018,7 @@
                     return vec3f(0.0);
                 }
                 fn render(ro: vec3f, rd: vec3f) -> vec3f {
+                    var local_ro = ro;
                     var final_color = vec3f(0.0);
                     var accum = vec3f(1.0);
                     for (var i = 0; i < 10; i++) {
@@ -1047,7 +1048,7 @@
                             // 反射
                             if (scene_info.z > 0.0) {
                                 accum *= scene_info.z * base_color;
-                                ro = hit_pos + normal * 0.01;
+                                local_ro = hit_pos + normal * 0.01;
                                 rd = reflect(rd, normal);
                             } else {
                                 break;
