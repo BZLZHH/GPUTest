@@ -893,8 +893,8 @@
                         return false;
                     }
 
-                    const adapterInfo = await adapter.requestAdapterInfo();
-                    const gpuInfo = adapterInfo.description || '未知GPU';
+                    //const adapterInfo = await adapter.requestAdapterInfo();
+                    const gpuInfo = /*adapterInfo.description ||*/ '未知GPU';
                     gpuInfoSpan.textContent = gpuInfo;
                     gpuModelSpan.textContent = gpuInfo;
 
@@ -1531,9 +1531,9 @@
         if (navigator.gpu) {
             navigator.gpu.requestAdapter().then(adapter => {
                 if (adapter) {
-                    adapter.requestAdapterInfo().then(info => {
-                        gpuModelSpan.textContent = info.description || '未知GPU';
-                    });
+                    //adapter.requestAdapterInfo().then(info => {
+                        gpuModelSpan.textContent = /*info.description ||*/ '未知GPU';
+                    //});
                 }
             });
         }
