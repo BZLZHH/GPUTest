@@ -1363,6 +1363,66 @@ const wgslScenes = {
         );
     }
     `
+    },
+    crystal_v1 : {
+        map : `
+            fn map(p: vec3f) -> vec4f {
+                // 水晶宫殿场景
+                let p_rep = opRep(p, vec3f(4.0, 4.0, 4.0));
+                
+                // 主水晶结构
+                let mainCrystal = vec4f(sdSphere(p_rep - vec3f(0.0, 0.0, 0.0), 0.8), 1.0, 0.95, 0.0);
+                
+                // 地面
+                let ground = vec4f(sdPlane(p), 2.0, 0.5, 0.0);
+                
+                // 辅助水晶结构
+                let crystal1 = vec4f(sdSphere(p_rep - vec3f(1.5, 0.5, 1.5), 0.5), 1.0, 0.92, 0.0);
+                let crystal2 = vec4f(sdSphere(p_rep - vec3f(-1.5, 0.7, -1.5), 0.6), 1.0, 0.9, 0.0);
+                
+                // 柱子
+                let pillar1 = vec4f(sdCylinder(p - vec3f(2.0, 0.0, 2.0), 0.3, 2.0), 3.0, 0.8, 0.0);
+                let pillar2 = vec4f(sdCylinder(p - vec3f(-2.0, 0.0, -2.0), 0.3, 2.0), 3.0, 0.8, 0.0);
+                
+                var res = ground;
+                res = opUnion(res, mainCrystal);
+                res = opUnion(res, crystal1);
+                res = opUnion(res, crystal2);
+                res = opUnion(res, pillar1);
+                res = opUnion(res, pillar2);
+                
+                return res;
+            }
+        `,
+        getColor : `
+            fn get_color(mat_id: f32) -> vec3f {
+                if (mat_id < 1.5) {
+                    // 水晶材质
+                    return vec3f(0.9, 0.95, 1.0);
+                }
+                if (mat_id < 2.5) {
+                    // 地面材质
+                    return vec3f(0.7, 0.7, 0.8);
+                }
+                // 柱子材质
+                return vec3f(0.4, 0.6, 0.9);
+            }
+        `,
+        getEmission : `
+            fn get_emission(mat_id: f32, glow: f32) -> vec3f {
+                if (glow > 0.0) {
+                    if (mat_id < 1.5) {
+                        return vec3f(0.2, 0.8, 0.3) * 3.0;
+                    }
+                    return vec3f(0.8, 0.2, 0.1) * 2.0;
+                }
+                return vec3f(0.0);
+            }
+        `,
+        cameraPath : `
+            let time = u.time * 0.1;
+            var ro = vec3f(5.0 * cos(time), 3.0, 5.0 * sin(time));
+        `
     }
 };
 
