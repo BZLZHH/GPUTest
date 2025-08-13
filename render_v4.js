@@ -893,6 +893,80 @@ previewItems.forEach(item => { item.addEventListener('click', onSceneSelect); })
 // onSettingsChange();
 // switchBackend(backendSelector.value);
 
+let isPaused = true; // 默认暂停（true）
+const pauseBtn = document.getElementById('pause-btn');
+
+function updatePauseButtonUI() {
+    if (!pauseBtn) return;
+    if (isPaused) {
+        pauseBtn.setAttribute('aria-pressed', 'false');
+        pauseBtn.classList.remove('active');
+        pauseBtn.innerHTML = '<i class="fas fa-play"></i> 开始渲染';
+    } else {
+        pauseBtn.setAttribute('aria-pressed', 'true');
+        pauseBtn.classList.add('active');
+        pauseBtn.innerHTML = '<i class="fas fa-pause"></i> 暂停渲染';
+    }
+}
+
+// 渲染循环控制：开始 / 停止（安全封装）
+function startRenderLoop() {
+    if (!isPaused && !animationFrameId) {
+        // 重置时间基准，避免大跳帧
+        startTime = performance.now();
+        lastFrameTime = startTime;
+        animationFrameId = requestAnimationFrame(animate);
+    }
+}
+
+function stopRenderLoop() {
+    if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+    }
+}
+
+// 按钮事件：切换状态（初始化只会改变 isPaused，不会重新 init 后端）
+if (pauseBtn) {
+    pauseBtn.addEventListener('click', async (e) => {
+        isPaused = !isPaused;
+        updatePauseButtonUI();
+
+        if (isPaused) {
+            // 暂停：停止循环，但保留 currentBackend 实例（可快速恢复）
+            stopRenderLoop();
+            renderStatusSpan.textContent = "已暂停";
+            statusIndicator.className = "status-indicator status-good";
+        } else {
+            // 恢复：启动循环（如果后端尚未初始化，先初始化）
+            renderStatusSpan.textContent = "渲染中...";
+            statusIndicator.className = "status-indicator status-optimal";
+
+            // 如果后端还没 init（比如页面刚 load 但未成功 init），先 init，再启动
+            if (!currentBackend) {
+                // 使用 selector 的值初始化后端（不改 cookie）
+                const desired = backendSelector.value || (getBackendCookie() || 'webgpu');
+                try {
+                    // 注意：switchBackend 会在成功时只启动循环（我们下面调用 startRenderLoop）
+                    await switchBackend(desired);
+                }
+                catch (err) {
+                    console.error('恢复时后端初始化失败：', err);
+                    renderStatusSpan.textContent = '初始化失败';
+                    statusIndicator.className = "status-indicator status-high";
+                    return;
+                }
+            }
+
+            // 启动渲染循环
+            startRenderLoop();
+        }
+    });
+}
+
+// 首次页面加载时，保证 UI 显示为“暂停”
+updatePauseButtonUI();
+
 // 初始GPU信息
 if (navigator.gpu) {
     navigator.gpu.requestAdapter().then(adapter => {

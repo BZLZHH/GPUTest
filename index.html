@@ -307,6 +307,20 @@
             font-size: 1.2rem;
         }
 
+        #pause-btn {
+            display: block;     
+            margin: 0 auto 20px;
+            width: 180px;       
+        }
+
+        #pause-btn.active {
+            background: rgba(0, 150, 255, 0.6);
+            border-color: #00e5ff;
+            box-shadow: 0 0 25px rgba(0, 150, 255, 0.6);
+            transform: translateY(-3px);
+        }
+
+
         .shader-presets {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -490,7 +504,9 @@
             <div class="panel-title">
                 <i class="fas fa-sliders-h"></i> 控制面板
             </div>
-
+            <button id="pause-btn" aria-pressed="false" class="shader-btn" >
+                <i class="fas fa-play"></i> 开始渲染
+            </button>
             <div class="control-group">
                 <label for="backend-selector"><i class="fas fa-code"></i> 渲染后端</label>
                 <select id="backend-selector">
