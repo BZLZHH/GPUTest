@@ -570,63 +570,178 @@ const webgpuBackend = {
 const wgslScenes = {
     crystal : {
         map : `
-            fn map(p: vec3f) -> vec4f {
-                // 水晶宫殿场景
-                let p_rep = opRep(p, vec3f(4.0, 4.0, 4.0));
-                
-                // 主水晶结构
-                let mainCrystal = vec4f(sdSphere(p_rep - vec3f(0.0, 0.0, 0.0), 0.8), 1.0, 0.95, 0.0);
-                
-                // 地面
-                let ground = vec4f(sdPlane(p), 2.0, 0.5, 0.0);
-                
-                // 辅助水晶结构
-                let crystal1 = vec4f(sdSphere(p_rep - vec3f(1.5, 0.5, 1.5), 0.5), 1.0, 0.92, 0.0);
-                let crystal2 = vec4f(sdSphere(p_rep - vec3f(-1.5, 0.7, -1.5), 0.6), 1.0, 0.9, 0.0);
-                
-                // 柱子
-                let pillar1 = vec4f(sdCylinder(p - vec3f(2.0, 0.0, 2.0), 0.3, 2.0), 3.0, 0.8, 0.0);
-                let pillar2 = vec4f(sdCylinder(p - vec3f(-2.0, 0.0, -2.0), 0.3, 2.0), 3.0, 0.8, 0.0);
-                
-                var res = ground;
-                res = opUnion(res, mainCrystal);
-                res = opUnion(res, crystal1);
-                res = opUnion(res, crystal2);
-                res = opUnion(res, pillar1);
-                res = opUnion(res, pillar2);
-                
-                return res;
+        fn rotateY(p: vec3f, angle: f32) -> vec3f {
+            let c = cos(angle);
+            let s = sin(angle);
+            return vec3f(
+                p.x * c - p.z * s,
+                p.y,
+                p.x * s + p.z * c
+            );
+        }
+            
+        fn crystalCluster(p: vec3f, pos: vec3f, size: f32) -> vec4f {
+            var res = vec4f(1000.0, 0.0, 0.0, 0.0);
+
+            // 主水晶
+            res = opUnion(res, vec4f(sdOctahedron(p - pos, size), 1.0, 0.95, 0.0));
+
+            // 周围小水晶
+            for (var i: i32 = 0; i < 6; i = i + 1) {
+                let angle = f32(i) * 3.14159 / 3.0;
+                let offset = vec3f(cos(angle) * size * 1.2, 0.0, sin(angle) * size * 1.2);
+                res = opUnion(res, vec4f(sdOctahedron(p - (pos + offset), size * 0.4), 1.0, 0.9, 0.0));
             }
-        `,
+
+            return res;
+        }
+        
+        fn map(p: vec3f) -> vec4f {
+            // 地面 - 带反射效果
+            let ground = vec4f(sdPlane(p - vec3f(0.0, -1.0, 0.0)), 2.0, 0.5, 0.1);
+            
+            // 中央巨型水晶 - 带脉动效果
+            let pulse = 0.9 + 0.1 * sin(u.time * 2.0);
+            let mainCrystal = vec4f(sdOctahedron(p - vec3f(0.0, 3.0, 0.0), 1.5 * pulse), 1.0, 0.97, 0.0);
+            
+            // 15个反射柱体 - 圆形排列
+            var pillars = vec4f(1000.0, 0.0, 0.0, 0.0);
+            for (var i: i32 = 0; i < 15; i = i + 1) {
+                let angle = f32(i) * 3.14159 * 2.0 / 15.0;
+                let pos = vec3f(cos(angle) * 5.0, 0.0, sin(angle) * 5.0);
+                let pillar = vec4f(sdCylinder(p - pos, 0.2, 4.0), 3.0, 0.85, 0.0);
+                pillars = opUnion(pillars, pillar);
+            
+                // 柱顶水晶球 - 带旋转效果
+                let rotAngle = u.time * (0.5 + f32(i) * 0.05);
+                // 修复：先计算旋转后的位置，再传入 sdSphere，参数顺序正确
+                let crystalBall = vec4f(sdSphere(rotateY(p - (pos + vec3f(0.0, 4.5, 0.0)), rotAngle), 0.6), 1.0, 0.92, 0.0);
+                pillars = opUnion(pillars, crystalBall);
+            }
+
+            // 水晶簇 - 地面分布
+            var clusters = vec4f(1000.0, 0.0, 0.0, 0.0);
+            clusters = opUnion(clusters, crystalCluster(p, vec3f(3.0, 0.0, 3.0), 0.8));
+            clusters = opUnion(clusters, crystalCluster(p, vec3f(-3.0, 0.0, -3.0), 0.7));
+            clusters = opUnion(clusters, crystalCluster(p, vec3f(4.0, 0.0, -2.0), 0.9));
+            clusters = opUnion(clusters, crystalCluster(p, vec3f(-4.0, 0.0, 2.0), 0.6));
+            
+            // 悬浮水晶 - 动态漂浮
+            let t = u.time;
+            let floatingCrystal1 = vec4f(sdOctahedron(p - vec3f(
+                2.0 * sin(t * 0.3),
+                3.0 + 1.5 * cos(t * 0.7),
+                2.0 * cos(t * 0.3)
+            ), 0.5), 1.0, 0.95, 0.0);
+            
+            let floatingCrystal2 = vec4f(sdOctahedron(p - vec3f(
+                -2.0 * cos(t * 0.4),
+                4.0 + 1.2 * sin(t * 0.8),
+                -2.0 * sin(t * 0.4)
+            ), 0.4), 1.0, 0.95, 0.0);
+            
+            let floatingCrystal3 = vec4f(sdOctahedron(p - vec3f(
+                3.0 * sin(t * 0.5),
+                5.0 + 1.8 * cos(t * 0.6),
+                3.0 * cos(t * 0.5)
+            ), 0.6), 1.0, 0.95, 0.0);
+            
+            // 能量光束
+            let beam = vec4f(sdCylinder(p - vec3f(0.0, 10.0, 0.0), 0.8, 15.0), 4.0, 0.1, 2.5);
+            
+            // 水晶树
+            let treeTrunk = vec4f(sdCylinder(p - vec3f(0.0, 0.0, -7.0), 0.5, 3.0), 3.0, 0.8, 0.0);
+            let treeCrystal1 = vec4f(sdOctahedron(p - vec3f(0.0, 3.0, -7.0), 0.8), 1.0, 0.95, 0.0);
+            let treeCrystal2 = vec4f(sdOctahedron(p - vec3f(0.8, 4.0, -7.0), 0.5), 1.0, 0.95, 0.0);
+            let treeCrystal3 = vec4f(sdOctahedron(p - vec3f(-0.8, 4.5, -7.0), 0.5), 1.0, 0.95, 0.0);
+            
+            // 反射球体 - 增强反射效果
+            let sphere1 = vec4f(sdSphere(p - vec3f(5.0, 2.0, 0.0), 1.2), 5.0, 0.3, 0.0);
+            let sphere2 = vec4f(sdSphere(p - vec3f(-5.0, 2.0, 0.0), 1.2), 5.0, 0.3, 0.0);
+            let sphere3 = vec4f(sdSphere(p - vec3f(0.0, 2.0, 5.0), 1.2), 5.0, 0.3, 0.0);
+            let sphere4 = vec4f(sdSphere(p - vec3f(0.0, 2.0, -5.0), 1.2), 5.0, 0.3, 0.0);
+            
+            var res = ground;
+            res = opUnion(res, mainCrystal);
+            res = opUnion(res, pillars);
+            res = opUnion(res, clusters);
+            res = opUnion(res, floatingCrystal1);
+            res = opUnion(res, floatingCrystal2);
+            res = opUnion(res, floatingCrystal3);
+            res = opUnion(res, beam);
+            res = opUnion(res, treeTrunk);
+            res = opUnion(res, treeCrystal1);
+            res = opUnion(res, treeCrystal2);
+            res = opUnion(res, treeCrystal3);
+            res = opUnion(res, sphere1);
+            res = opUnion(res, sphere2);
+            res = opUnion(res, sphere3);
+            res = opUnion(res, sphere4);
+            
+            return res;
+        }
+    `,
         getColor : `
-            fn get_color(mat_id: f32) -> vec3f {
-                if (mat_id < 1.5) {
-                    // 水晶材质
-                    return vec3f(0.9, 0.95, 1.0);
-                }
-                if (mat_id < 2.5) {
-                    // 地面材质
-                    return vec3f(0.7, 0.7, 0.8);
-                }
-                // 柱子材质
-                return vec3f(0.4, 0.6, 0.9);
+        fn get_color(mat_id: f32) -> vec3f {
+            if (mat_id < 1.5) {
+                // 水晶材质 - 淡蓝色
+                return vec3f(0.85, 0.95, 1.0);
             }
-        `,
+            if (mat_id < 2.5) {
+                // 地面材质 - 深蓝色
+                return vec3f(0.15, 0.2, 0.3);
+            }
+            if (mat_id < 3.5) {
+                // 柱子材质 - 青色
+                return vec3f(0.4, 0.8, 0.9);
+            }
+            if (mat_id < 4.5) {
+                // 能量光束 - 亮蓝色
+                return vec3f(0.2, 0.7, 1.0);
+            }
+            // 反射球体 - 银色
+            return vec3f(0.9, 0.95, 1.0);
+        }
+    `,
         getEmission : `
-            fn get_emission(mat_id: f32, glow: f32) -> vec3f {
-                if (glow > 0.0) {
-                    if (mat_id < 1.5) {
-                        return vec3f(0.2, 0.8, 0.3) * 3.0;
-                    }
-                    return vec3f(0.8, 0.2, 0.1) * 2.0;
-                }
-                return vec3f(0.0);
+        fn get_emission(mat_id: f32, glow: f32) -> vec3f {
+            let t = u.time;
+            
+            if (mat_id < 1.5) {
+                // 水晶 - 脉动效果
+                let pulse = 0.7 + 0.3 * sin(t * 2.0);
+                return vec3f(0.3, 0.8, 1.0) * 3.0 * pulse;
             }
-        `,
+            if (mat_id < 4.5 && mat_id > 3.5) {
+                // 能量光束 - 强烈发光
+                return vec3f(0.1, 0.9, 1.0) * 6.0 * (0.8 + 0.2 * sin(t * 3.0));
+            }
+            if (glow > 0.0) {
+                // 其他发光物体
+                if (mat_id < 2.5 && mat_id > 1.5) {
+                    // 地面 - 微弱发光
+                    return vec3f(0.1, 0.3, 0.8) * 0.5;
+                }
+                if (mat_id < 3.5 && mat_id > 2.5) {
+                    // 柱子 - 边缘发光
+                    return vec3f(0.3, 0.7, 1.0) * 1.2;
+                }
+                if (mat_id < 5.5 && mat_id > 4.5) {
+                    // 反射球体 - 环境反射
+                    return vec3f(0.8, 0.9, 1.0) * 0.8;
+                }
+            }
+            return vec3f(0.0);
+        }
+    `,
         cameraPath : `
-            let time = u.time * 0.1;
-            var ro = vec3f(5.0 * cos(time), 3.0, 5.0 * sin(time));
-        `
+        let time = u.time * 0.1;
+        var ro = vec3f(
+            8.0 * cos(time * 0.7),
+            4.0 + 2.0 * sin(time * 0.3),
+            8.0 * sin(time * 0.7)
+        );
+    `
     },
     cave : {
         map : `
